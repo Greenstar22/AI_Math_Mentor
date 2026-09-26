@@ -8,9 +8,11 @@ MathMentor AI is a Streamlit Community Cloud-ready educational prototype that re
 - **GitHub:** https://github.com/qxiao2ub/AI_Math_Mentor
 - **Live app:** https://math-ai-mentor.streamlit.app/
 
+The app supports teachers through step-level feedback, progress tracking, and targeted practice suggestions. The interface, feedback, and problems are English-only. Profiles contain no country, region, or language settings.
+
 ## UI migration
 
-The attached React, TypeScript, Tailwind CSS, shadcn/ui, and Framer Motion design was migrated into a native Streamlit experience. The exact front-end source is preserved under `ui_source/`; the deployable Streamlit implementation is `app.py`.
+The attached React, TypeScript, Tailwind CSS, shadcn/ui, and Framer Motion design was migrated into a native Streamlit experience. The front-end source is preserved under `ui_source/` with project-credit and README edits; the deployable Streamlit implementation is `app.py`.
 
 The migrated interface includes:
 
@@ -68,6 +70,9 @@ streamlit run app.py
 Upload the contents of this repository to GitHub, choose the repository in Streamlit Community Cloud, and set the main file path to `app.py`. No API key is required.
 
 ## Prototype notes
+
+- `math_mentor.py` is the single app backend and owns the six-problem starter bank from the uploaded Colab prototype. The root notebook code cells match that reference.
+- `ui_source/` is a standalone design reference with demo analysis and mastery data; it is not connected to the Python backend.
 
 - The starter problem bank is intentionally small and self-contained.
 - The symbolic checker is the primary mathematical validator.

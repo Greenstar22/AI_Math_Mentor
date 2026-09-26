@@ -25,7 +25,7 @@ The attached React/Tailwind prototype was migrated into a native Streamlit inter
 
 ## Architecture decision
 
-Streamlit Community Cloud serves Python applications and does not directly run a Vite development server as the primary app process. The UI was therefore ported to native Streamlit plus custom CSS, while the exact original React/Tailwind source is retained under `ui_source/` for design reference and future front-end work.
+Streamlit Community Cloud serves Python applications and does not directly run a Vite development server as the primary app process. The UI was therefore ported to native Streamlit plus custom CSS, while the supplied React/Tailwind source, with project-credit and README edits, is retained under `ui_source/` for design reference and future front-end work.
 
 ## Main entry point
 

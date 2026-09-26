@@ -1,80 +1,39 @@
 # Architecture
 
-```text
-Streamlit UI layer
-(Home / Analyze / Mastery / About / Settings)
-        |
-        +---- ui_theme.py: ported visual system
-        +---- ui_copy.py: UZ/RU/EN page copy
-        |
-        v
-Uzbekistan learner profile
-(country fixed, region, stage, grade/course, level)
-        |
-        v
-Stage/grade/topic filter ----> Local multilingual problem bank
-        |                                  |
-        v                                  v
-Student writes one mathematical step per line
-        |
-        v
-SymPy parser and equivalence checker (primary correctness layer)
-        |
-        +---- correct --> score and mastery update
-        |
-        +---- incorrect --> rule signals + TF-IDF/LogReg + 2-layer MLP
-                                  |
-                                  v
-                           Error classification
-                                  |
-                                  v
-        Epsilon-greedy feedback-style bandit
-          (Socratic / concise / worked example)
-                                  |
-                                  v
-           Session analytics, export, and recommendation
-```
+`app.py` provides the Home, Analyze, Mastery, About, and Settings views in
+Streamlit. It contains the visual styling and English interface copy and calls
+`math_mentor.py` for all mathematical analysis and learning records.
 
-## Why hybrid checking?
+## Learning workflow
 
-A generative model can produce a fluent explanation while still making a mathematical mistake. This prototype therefore uses deterministic symbolic mathematics for the primary correctness judgment. Machine-learning models are used only for the softer task of estimating the likely error category after a step is determined to be non-equivalent.
+1. A learner sets a display name, grade band, topic levels, feedback preference,
+   and optional learning notes.
+2. The learner selects one of the six starter problems migrated from the Colab
+   prototype and submits one mathematical step per line.
+3. SymPy compares each step against the expected solution trajectory.
+4. Rules, logistic regression, and a compact neural network assist error diagnosis.
+5. The app records the attempt and step evaluations in SQLite, estimates concept
+   mastery, and recommends practice using topic levels and observed weaknesses.
+6. A contextual bandit selects feedback styles; learners can rate the feedback
+   and download reports and history.
 
-## UI architecture
-
-The original React/Tailwind design was translated into native Streamlit rather than embedded as a second application. `ui_theme.py` carries the design tokens and CSS, while `app.py` owns all widget state and AI-engine calls. This avoids a Node build step and keeps GitHub-to-Streamlit deployment direct.
-
-## Uzbekistan-only controls
-
-- Country is read-only and fixed to Uzbekistan.
-- Regions are limited to Uzbekistan's Republic of Karakalpakstan, regions, and Tashkent city.
-- Education paths are limited to school, academic lyceum, and university.
-- The bundled local problem bank is the sole content source in the demonstration.
-- No general web search is performed by the application.
+The interface, problem bank, and generated feedback are English-only. Profiles
+contain learning needs and no geographic or locale settings.
 
 ## State and storage
 
-The prototype uses Streamlit session state for:
+Streamlit session state holds navigation, appearance, current learner settings,
+and the displayed report. `ai_math_mentor.db` stores student records, attempts,
+step evaluations, and feedback events. Feedback-bandit estimates are held in
+memory. Server restarts on Streamlit Community Cloud can erase local storage.
 
-- Learner profile
-- Current navigation destination
-- Attempts
-- Last analysis result
-- Reinforcement-learning feedback values
-- Prototype feedback messages
-- Appearance mode
+The learner identifier is derived from the display name; this prototype has no
+authenticated accounts. Mastery is a heuristic, and the small problem bank and
+synthetic diagnostic training data retain the original prototype's limitations.
 
-No persistent external database is used. Closing or expiring the browser session removes these records.
+## Source references
 
-## Production extension points
-
-- Curriculum-standard identifiers for each problem
-- Teacher-reviewed Uzbek and Russian mathematical terminology
-- Secure student and teacher authentication
-- PostgreSQL or another encrypted managed database
-- Institution tenancy and role-based access
-- Consent and guardian workflows for minors
-- Moderation and abuse prevention
-- Versioned model registry and evaluation suite
-- Teacher dashboards and assignment management
-- Formal curriculum mapping and content governance
-- Optional LLM explanation layer guarded by symbolic verification
+The root Colab notebook preserves the uploaded backend's code cells.
+`math_mentor.py` adapts that workflow for the app. `ui_source/` preserves the
+uploaded React design with project-credit and README edits. Its demonstration
+analysis and mastery data are not the running app's backend or learning records.

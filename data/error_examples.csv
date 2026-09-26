@@ -1,7 +1,0 @@
-text,label
-3+4=8 arithmetic number wrong,calculation_error
-x-4=10 becomes x=6 wrong sign,sign_error
-divide only one side of equation,algebra_transformation_error
-uses perimeter formula for area,concept_gap
-3*x= incomplete,incomplete_step
-unbalanced parenthesis,formatting_error

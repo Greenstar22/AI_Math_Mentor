@@ -1,50 +1,23 @@
 # UI Integration Notes
 
-## Source design translated into Streamlit
+The supplied Vite/React UI uses TypeScript, Tailwind CSS, shadcn/ui, Framer Motion,
+React Router, Archivo Black, and Inter. Its five main views are Home, Analyze,
+Mastery, About, and Settings.
 
-The supplied UI was a Vite/React application using TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, React Router, Archivo Black, and Inter. It defined five primary routes:
+The current app implements those views in Streamlit in `app.py`, retaining the
+black-and-cobalt palette, dark/light appearance, large headings, bordered cards,
+step feedback panels, and mastery displays. Native Streamlit controls mean this
+is a design adaptation rather than a pixel-identical React rendering.
 
-- Home
-- Analyze
-- Mastery
-- About
-- Settings
+All interface copy is English. Learner settings focus on grade band, topic
+levels, feedback preference, and learning notes. `math_mentor.py` supplies the
+Colab-derived problem bank, step analysis, persistence, and recommendations.
 
-The final repository keeps those five information-architecture destinations but implements them natively in Streamlit so Streamlit Community Cloud can launch the project directly from `app.py`.
+`ui_source/` remains a design reference. Compared with the supplied ZIP, its
+substantive edits are project attribution in About and Footer and its README.
+Running that React reference separately does not connect it to the Python
+backend. Making it the active frontend would require an API integration and a
+corresponding deployment change.
 
-## Retained visual characteristics
-
-- Oversized Archivo-style display headings
-- Inter-style body typography with safe fallbacks
-- Dark mode as the default
-- Light-mode option
-- Cobalt-blue primary accent
-- Square, border-driven cards and controls
-- Top horizontal navigation
-- Large landing-page hero
-- Three-step "how it works" presentation
-- Analyze workspace with problem, solution, and feedback phases
-- Step feedback cards with correct/error edge treatments
-- Mastery progress cards
-- Large typographic footer
-
-## Uzbekistan adaptations
-
-The visual design is combined with the existing Uzbekistan-only product constraints:
-
-- Uzbekistan flag stripe and country branding
-- Uzbekistan regions
-- School, academic lyceum, and university pathways
-- Uzbek, Russian, and English interface copy
-- Local UZS/problem contexts
-- Independent-prototype notice
-
-## Why the React project is not embedded
-
-Embedding a separate React application inside Streamlit would require a second build toolchain, static-asset hosting, component messaging, and duplicated application state. Instead, the design tokens and layouts were ported into `ui_theme.py` and the page copy into `ui_copy.py`. This keeps the deployment single-process, GitHub-friendly, and compatible with Streamlit Community Cloud.
-
-## Main implementation files
-
-- `ui_theme.py`: colors, typography, card treatment, navigation styling, button/input styling, metrics, progress bars, and footer.
-- `ui_copy.py`: Uzbek, Russian, and English copy for the redesigned pages.
-- `app.py`: page composition and integration with the existing AI engine.
+See `UI_MIGRATION.md` for the retained design features and `ARCHITECTURE.md` for
+the running app's learning workflow and storage.
