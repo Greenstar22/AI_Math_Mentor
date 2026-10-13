@@ -53,6 +53,7 @@ def test_saved_settings_survive_navigation_and_reruns():
         "school_class": "Math class",
         "accessibility_notes": "Shorter explanations",
     }
+    app.radio(key="theme_input").set_value("Light").run()
     app.text_input(key="display_name_input").set_value(saved["display_name"])
     app.selectbox(key="grade_band_input").set_value(saved["grade_band"])
     app.text_input(key="school_class_input").set_value(saved["school_class"])
@@ -67,14 +68,42 @@ def test_saved_settings_survive_navigation_and_reruns():
     next(button for button in app.button if button.label == "Save learner settings").click().run()
     assert not app.exception
 
-    for page in ["Analyze", "Mastery", "Home", "Analyze", "Settings"]:
+    for page in ["Home", "Settings", "Analyze", "Mastery", "Home", "Analyze", "Settings"]:
         app.radio[0].set_value(page).run()
         app.run()
         assert not app.exception
         for key, value in saved.items():
             assert app.session_state[key] == value
+        assert app.session_state["theme"] == "Light"
         if page == "Analyze":
             assert any(saved["display_name"] in element.value for element in app.markdown)
+            assert any(saved["grade_band"] in element.value for element in app.markdown)
+            assert any(saved["preferred_feedback"].replace("_", " ") in element.value for element in app.markdown)
 
     assert app.text_input(key="display_name_input").value == saved["display_name"]
     assert app.selectbox(key="grade_band_input").value == saved["grade_band"]
+    assert app.text_input(key="school_class_input").value == saved["school_class"]
+    assert app.text_area(key="accessibility_notes_input").value == saved["accessibility_notes"]
+    assert app.selectbox(key="preferred_feedback_input").value == saved["preferred_feedback"]
+    assert app.radio(key="theme_input").value == "Light"
+    for key, value in saved.items():
+        if key.startswith("level_"):
+            assert app.selectbox(key=f"{key}_input").value == value
+
+
+def test_mastery_level_changes_survive_home_and_update_settings():
+    app = AppTest.from_file(str(APP), default_timeout=60).run()
+    app.radio[0].set_value("Mastery").run()
+    app.selectbox(key="mastery_level_Algebra_input").set_value("advanced").run()
+    assert not app.exception
+    assert app.session_state["level_Algebra"] == "advanced"
+
+    app.radio[0].set_value("Home").run()
+    app.run()
+    app.radio[0].set_value("Settings").run()
+    assert not app.exception
+    assert app.selectbox(key="level_Algebra_input").value == "advanced"
+
+    app.radio[0].set_value("Analyze").run()
+    assert not app.exception
+    assert any("Algebra <strong>advanced</strong>" in element.value for element in app.markdown)

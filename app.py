@@ -101,6 +101,15 @@ def update_current_profile() -> None:
     for topic in TOPICS:
         st.session_state[f"level_{topic}"] = st.session_state[f"level_{topic}_input"]
 
+
+def update_topic_level(topic: str) -> None:
+    st.session_state[f"level_{topic}"] = st.session_state[f"mastery_level_{topic}_input"]
+
+
+def update_theme() -> None:
+    st.session_state["theme"] = st.session_state["theme_input"]
+
+
 def inject_css() -> None:
     dark = st.session_state["theme"] == "Dark"
     if dark:
@@ -671,11 +680,14 @@ def render_mastery() -> None:
                 st.markdown(f"### {topic}")
                 st.caption(f"Mastery {mastery:.2f} | Attempted steps {attempted_steps} | Error rate {100 * error_rate:.0f}%")
             with level_col:
+                st.session_state[f"mastery_level_{topic}_input"] = st.session_state[f"level_{topic}"]
                 st.selectbox(
                     "Starting level",
                     LEVEL_OPTIONS,
-                    key=f"level_{topic}",
+                    key=f"mastery_level_{topic}_input",
                     format_func=lambda value: value.title(),
+                    on_change=update_topic_level,
+                    args=(topic,),
                 )
             st.progress(max(0.0, min(1.0, mastery)))
             subset = summary[summary["topic"] == topic] if not summary.empty else pd.DataFrame()
@@ -809,7 +821,8 @@ def render_settings() -> None:
     )
     st.markdown("## Display")
     st.caption("Choose the brightness that feels best for studying. The attached UI uses dark mode by default.")
-    st.radio("Appearance", ["Dark", "Light"], horizontal=True, key="theme")
+    st.session_state.setdefault("theme_input", st.session_state["theme"])
+    st.radio("Appearance", ["Dark", "Light"], horizontal=True, key="theme_input", on_change=update_theme)
 
     st.markdown("## Learner profile")
     st.session_state.setdefault("display_name_input", st.session_state["display_name"])
