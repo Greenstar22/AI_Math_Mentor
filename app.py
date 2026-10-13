@@ -455,8 +455,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
                 <div class="mm-detail-grid">
                     <div class="mm-detail"><div class="mm-label">Expected step</div><div class="mm-detail-value">{esc(evaluation['expected_step'])}</div></div>
                     <div class="mm-detail"><div class="mm-label">Concept</div><div class="mm-detail-value">{esc(evaluation['concept'].replace('_', ' '))}</div></div>
-                </div>
-            """
+                </div>"""
         st.markdown(
             f"""
             <div class="mm-review-card{css}">
@@ -466,8 +465,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
                     <span class="mm-label">{esc(evaluation['error_type'].replace('_', ' '))}</span>
                     <span class="mm-label">Confidence {100 * float(evaluation['confidence']):.0f}%</span>
                 </div>
-                <div class="mm-submitted">{esc(evaluation['student_step'])}</div>
-                {detail}
+                <div class="mm-submitted">{esc(evaluation['student_step'])}</div>{detail}
                 <div class="mm-mentor-note"><strong>{esc(feedback['style'].replace('_', ' ').title())}:</strong> {esc(feedback['feedback'])}<br><span style="color:var(--mm-muted)">{esc(evaluation['explanation'])}</span></div>
             </div>
             """,
