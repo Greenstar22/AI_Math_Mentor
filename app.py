@@ -92,6 +92,14 @@ def current_profile() -> StudentProfile:
         accessibility_notes=st.session_state["accessibility_notes"],
     )
 
+def update_current_profile() -> None:
+    st.session_state["display_name"] = st.session_state["display_name_input"]
+    st.session_state["grade_band"] = st.session_state["grade_band_input"]
+    st.session_state["school_class"] = st.session_state["school_class_input"]
+    st.session_state["preferred_feedback"] = st.session_state["preferred_feedback_input"]
+    st.session_state["accessibility_notes"] = st.session_state["accessibility_notes_input"]
+    for topic in TOPICS:
+        st.session_state[f"level_{topic}"] = st.session_state[f"level_{topic}_input"]
 
 def inject_css() -> None:
     dark = st.session_state["theme"] == "Dark"
@@ -804,32 +812,41 @@ def render_settings() -> None:
     st.radio("Appearance", ["Dark", "Light"], horizontal=True, key="theme")
 
     st.markdown("## Learner profile")
+    st.session_state.setdefault("display_name_input", st.session_state["display_name"])
+    st.session_state.setdefault("grade_band_input", st.session_state["grade_band"])
+    st.session_state.setdefault("school_class_input", st.session_state["school_class"])
+    st.session_state.setdefault("preferred_feedback_input", st.session_state["preferred_feedback"])
+    st.session_state.setdefault("accessibility_notes_input", st.session_state["accessibility_notes"])
+    for topic in TOPICS:
+        st.session_state.setdefault(f"level_{topic}_input", st.session_state[f"level_{topic}"])
     with st.form("profile_form"):
         p1, p2 = st.columns(2)
-        p1.text_input("Display name", key="display_name")
+        p1.text_input("Display name", key="display_name_input")
         p2.selectbox(
             "Grade band",
             ["Grades 5-7", "Grades 7-10", "Grades 9-12", "Grades 9-12 / College", "College / AP", "College"],
-            key="grade_band",
+            key="grade_band_input",
         )
-        p1.text_input("School / class (optional)", key="school_class")
+        p1.text_input("School / class (optional)", key="school_class_input")
         p2.selectbox(
             "Preferred feedback style",
             FEEDBACK_STYLES,
-            key="preferred_feedback",
+            key="preferred_feedback_input",
             format_func=lambda value: value.replace("_", " ").title(),
         )
         st.text_area(
             "Accessibility or learning notes (optional)",
-            key="accessibility_notes",
+            key="accessibility_notes_input",
             help="Examples: shorter explanations, more worked examples, larger chunks, or extra notation reminders.",
         )
         st.markdown("### Current topic level")
         level_columns = st.columns(3)
         for index, topic in enumerate(TOPICS):
             with level_columns[index % 3]:
-                st.selectbox(topic, LEVEL_OPTIONS, key=f"level_{topic}", format_func=lambda value: value.title())
-        saved = st.form_submit_button("Save learner settings", type="primary")
+                st.selectbox(topic, LEVEL_OPTIONS, key=f"level_{topic}_input", format_func=lambda value: value.title())
+        saved = st.form_submit_button(
+            "Save learner settings", type="primary", on_click=update_current_profile,
+        )
         if saved:
             st.success("Learner settings saved for this browser session.")
 
