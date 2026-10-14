@@ -65,7 +65,7 @@ streamlit run app.py
 
 ## Deploy on Streamlit Community Cloud
 
-Upload the contents of this repository to GitHub, choose the repository in Streamlit Community Cloud, and set the main file path to `app.py`. No API key is required.
+Upload the contents of this repository to GitHub, choose the repository in Streamlit Community Cloud, and set the main file path to `app.py`. No API key is required for the math tutoring functions. Persistent cumulative visit counting requires one private GitHub token and a separate GitHub branch; see `VISITOR_COUNTER_SETUP.md`.
 
 ## Prototype notes
 
@@ -79,3 +79,36 @@ Upload the contents of this repository to GitHub, choose the repository in Strea
 
 - **Author:** Anchit Nayak
 - **Advisor:** Dr. Qingyang Xiao
+
+## Persistent cumulative app-visit counter (new)
+
+**Visible on every view (Home, Analyze, Mastery, About, Settings)** at the top
+and in the footer. It increments by one for each *new Streamlit session*, not
+each navigation click or UI rerun. The integer is preserved in a **GitHub JSON
+file on a separate `visitor-stats` branch**, so it survives normal Streamlit
+Community Cloud restarts and redeployments without using a counter database.
+No personal visitor information is collected for this counter.
+
+### Important: one-time secret and branch are required
+
+A live, never-reset-on-redeploy total **cannot be guaranteed** with Streamlit's
+local ephemeral files alone. To activate persistent counts, follow the exact
+instructions in **[VISITOR_COUNTER_SETUP.md](VISITOR_COUNTER_SETUP.md)**:
+
+1. Upload the repo to `main` at https://github.com/qxiao2ub/AI_Math_Mentor.
+2. Create a new GitHub branch named `visitor-stats` from `main` **once**.
+3. Create a fine-grained GitHub token scoped to this one repository with
+   Contents **read/write** access.
+4. Add the token and the branch in Streamlit Community Cloud's **App settings
+   → Secrets** using `.streamlit/secrets.example.toml` as the template.
+
+**Never push a real token to GitHub.** Without the token, the app still runs,
+but the badge will show **— / SETUP REQUIRED**, not a false permanent count.
+An initial zero in the JSON is only a seed; a successful first session changes
+it to 1, and the UI never shows zero as an active visit total. Do not delete or
+recreate the `visitor-stats` branch after launching, as it holds the history.
+
+The file-commit implementation retries GitHub SHA conflicts and is appropriate
+for a small educational prototype. It may not capture every visit during
+GitHub outages/rate limits, and it does not distinguish unique humans from
+multiple browser sessions.
