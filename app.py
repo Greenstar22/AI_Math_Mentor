@@ -473,16 +473,19 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
         )
 
     recommendation = report["recommended_problem"]
-    st.markdown(
-        f"""
-        <div class="mm-problem">
-            <div class="mm-meta">Recommended next problem</div>
-            <div class="mm-problem-text">{esc(recommendation['prompt'])}</div>
-            <div class="mm-meta">{esc(recommendation['problem_id'])} / {esc(recommendation['topic'])} / Difficulty {recommendation['difficulty']}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        recommendation_text, recommendation_button = st.columns([3, 1], vertical_alignment="center")
+        with recommendation_text:
+            st.markdown(
+                f"""<div class="mm-meta">Recommended next problem</div>
+<div class="mm-problem-text">{esc(recommendation['prompt'])}</div>
+<div class="mm-meta">{esc(recommendation['problem_id'])} / {esc(recommendation['topic'])} / Difficulty {recommendation['difficulty']}</div>""",
+                unsafe_allow_html=True,
+            )
+        with recommendation_button:
+            if st.button("Move on to next problem", type="primary", use_container_width=True):
+                st.session_state["_problem_request"] = recommendation["problem_id"]
+                st.rerun()
 
     snapshot = pd.DataFrame(report.get("weakness_summary", []))
     if not snapshot.empty:

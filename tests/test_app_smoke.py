@@ -40,6 +40,12 @@ def test_learning_profile_and_analysis():
     assert report["scores"]["overall_score"] == 100.0
     assert report["recommended_problem"]["problem_id"]
     assert "country" not in report["profile"]
+    recommended_id = report["recommended_problem"]["problem_id"]
+    next(button for button in app.button if button.label == "Move on to next problem").click().run()
+    assert not app.exception
+    assert app.selectbox(key="problem_selector").value == recommended_id
+    assert "last_report" not in app.session_state
+    assert not any(button.label == "Move on to next problem" for button in app.button)
     app.radio[0].set_value("Mastery").run()
     assert not app.exception
 
