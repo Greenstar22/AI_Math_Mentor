@@ -1,8 +1,12 @@
 name: tests
 
+# Visitor counter commits are pushed to visitor-stats, not to app source.
+# Run CI only for application-code changes, not every new app visit.
 on:
   push:
+    branches: [main, master]
   pull_request:
+    branches: [main, master]
 
 jobs:
   test:
