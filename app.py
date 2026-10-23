@@ -1,3 +1,5 @@
+# possible name: algebra mentor or smth since focused on algebra and sympy stuff
+
 from __future__ import annotations
 
 import hashlib
