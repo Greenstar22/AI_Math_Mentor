@@ -11,6 +11,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from visit_counter import CounterConfig, CounterError, CounterSnapshot, GitHubVisitCounter, snapshot_for_session
+
 from math_mentor import (
     ADVISOR,
     AUTHOR,
@@ -185,6 +187,26 @@ def inject_css() -> None:
             padding: 1rem 1.15rem;
             margin-bottom: .3rem;
         }}
+        .mm-visitbar {{
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: .6rem 1.15rem;
+            margin-bottom: 1rem;
+            padding: .75rem 1.05rem;
+            background: linear-gradient(100deg, var(--mm-surface), var(--mm-bg));
+            border: 1px solid var(--mm-border);
+            border-left: 3px solid var(--mm-primary);
+        }}
+        .mm-visitlabel {{ color: var(--mm-muted); font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }}
+        .mm-visitpill {{ display: inline-flex; align-items: baseline; gap: .55rem; flex-wrap: wrap; }}
+        .mm-visitnum {{ color: var(--mm-fg); font-family: 'Archivo Black', 'Arial Black', sans-serif; font-size: 1.75rem; letter-spacing: -.04em; line-height: 1; }}
+        .mm-visitdesc {{ color: var(--mm-primary-2); font-size: .70rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }}
+        .mm-visitstatus {{ color: var(--mm-muted); font-size: .69rem; }}
+        .mm-visitdot {{ color: var(--mm-primary-2); font-size: .8rem; margin-right: .22rem; }}
+        .mm-footer-visits {{ display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .5rem; margin: 1.3rem auto 0; color: var(--mm-muted); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; }}
+        .mm-footer-visits strong {{ color: var(--mm-primary-2); font-size: 1.1rem; font-family: 'Archivo Black', sans-serif; }}
         .mm-brand {{ font-family: 'Archivo Black', 'Arial Black', sans-serif; font-size: 1.2rem; letter-spacing: -.04em; }}
         .mm-brand span, .mm-accent {{ color: var(--mm-primary-2); }}
         .mm-byline {{ color: var(--mm-muted); font-size: .68rem; letter-spacing: .15em; text-transform: uppercase; margin-top: .35rem; }}
@@ -292,6 +314,39 @@ def inject_css() -> None:
         }}
         </style>
         """,
+        unsafe_allow_html=True,
+    )
+
+
+def current_visit_snapshot() -> CounterSnapshot:
+    """Record one new-session visit and load a globally persisted count.
+
+    The file is stored on a separate GitHub branch, never on ephemeral cloud
+    disk. If the token isn't configured, the app remains usable and honestly
+    displays a dash / setup message rather than pretending its total is 0.
+    """
+    try:
+        config = CounterConfig.from_secrets(st.secrets)
+        backend = GitHubVisitCounter(config) if config.token else None
+        return snapshot_for_session(st.session_state, backend)
+    except CounterError as err:
+        return CounterSnapshot(None, "unavailable", str(err))
+
+
+def render_visit_bar(snapshot: CounterSnapshot) -> None:
+    value = f"{snapshot.total:,}" if snapshot.total is not None and snapshot.total > 0 else "—"
+    status = {
+        "live": "LIVE / PERSISTENT",
+        "cached": "LAST KNOWN TOTAL",
+        "setup": "SETUP REQUIRED",
+        "unavailable": "TEMPORARILY UNAVAILABLE",
+    }.get(snapshot.status, "STATUS UNKNOWN")
+    st.markdown(
+        f'''<div class="mm-visitbar" role="status" aria-live="polite">
+            <div class="mm-visitlabel"><span class="mm-visitdot">●</span> MathMentor AI · Community activity</div>
+            <div class="mm-visitpill"><span class="mm-visitnum">{esc(value)}</span><span class="mm-visitdesc">Cumulative App Visits</span></div>
+            <div class="mm-visitstatus" title="{esc(snapshot.message)}">{esc(status)}</div>
+        </div>''',
         unsafe_allow_html=True,
     )
 
@@ -885,12 +940,16 @@ def render_settings() -> None:
     st.info("This prototype intentionally does not collect or save passwords, payment data, or account credentials.")
 
 
-def render_footer() -> None:
+def render_footer(snapshot: CounterSnapshot) -> None:
     st.markdown(
         f"""
         <div class="mm-footer">
             <div class="mm-footer-mark">MATHMENTOR <span class="mm-accent">AI</span></div>
             <div class="mm-footer-copy">Author {esc(AUTHOR)} &nbsp; / &nbsp; Advisor {esc(ADVISOR)} &nbsp; / &nbsp; Step-by-step feedback that teaches</div>
+            <div class="mm-footer-visits"><span>Cumulative App Visits</span>
+              <strong>{esc(f'{snapshot.total:,}' if snapshot.total is not None and snapshot.total > 0 else '—')}</strong>
+              <span>· {esc('Live' if snapshot.status == 'live' else 'Last Known' if snapshot.status == 'cached' else 'Unavailable / Setup Required')}</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -899,6 +958,8 @@ def render_footer() -> None:
 
 initialize_state()
 inject_css()
+visitor_snapshot = current_visit_snapshot()
+render_visit_bar(visitor_snapshot)
 page = render_navigation()
 
 if page == "Home":
@@ -912,4 +973,4 @@ elif page == "About":
 elif page == "Settings":
     render_settings()
 
-render_footer()
+render_footer(visitor_snapshot)
