@@ -775,7 +775,7 @@ def render_mastery() -> None:
         )
         st.dataframe(attempt_summary, width="stretch", hide_index=True)
         if not summary.empty:
-            chart = summary[["topic", "skills", "mastery"]].copy()
+            chart = summary[["topic", "skill", "mastery"]].copy()
             chart["skill"] = chart["topic"] + ": " + chart["skill"].str.replace("_", " ")
             st.markdown("### Skill mastery comparison")
             st.bar_chart(chart.set_index("skill")["mastery"])

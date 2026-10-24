@@ -562,6 +562,10 @@ def initialize_database(db_path: Path = DB_PATH) -> None:
             created_at TEXT NOT NULL
         );
         """)
+        # CREATE TABLE IF NOT EXISTS does not update databases from older versions.
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(step_evaluations)")}
+        if "concept" in columns and "skill" not in columns:
+            conn.execute("ALTER TABLE step_evaluations RENAME COLUMN concept TO skill")
 
 
 

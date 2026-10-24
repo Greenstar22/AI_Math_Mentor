@@ -8,14 +8,14 @@ def main() -> None:
         grade_band="Grades 9-12",
         current_levels={
             "Arithmetic": "entry",
-            "Algebra": "intermediate",
+            "Algebra 1": "intermediate",
             "Calculus": "entry",
             "Probability": "intermediate",
             "Differential Equations": "entry",
         },
         preferred_feedback="socratic",
     )
-    problem = next(item for item in PROBLEM_BANK if item.problem_id == "ALG-LIN-001")
+    problem = next(item for item in PROBLEM_BANK if item.problem_id == "ALG1-LIN-001")
     steps = ["2*x + 3 = 11", "2*x = 8", "x = 4"]
     report = run_mentor_attempt(profile, problem.problem_id, steps, save=False)
     assert report["scores"]["overall_score"] >= 90

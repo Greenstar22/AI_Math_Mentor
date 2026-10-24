@@ -32,7 +32,7 @@ def test_learning_profile_and_analysis():
     assert not labels.intersection({"Country", "Region", "Language", "Interface language"})
 
     app.radio[0].set_value("Analyze").run()
-    app.selectbox(key="problem_selector").set_value("ALG-LIN-001").run()
+    app.selectbox(key="problem_selector").set_value("ALG1-LIN-001").run()
     next(button for button in app.button if button.label == "Analyze my solution ->").click().run()
     assert not app.exception
     assert not app.error
@@ -100,16 +100,16 @@ def test_saved_settings_survive_navigation_and_reruns():
 def test_mastery_level_changes_survive_home_and_update_settings():
     app = AppTest.from_file(str(APP), default_timeout=60).run()
     app.radio[0].set_value("Mastery").run()
-    app.selectbox(key="mastery_level_Algebra_input").set_value("advanced").run()
+    app.selectbox(key="mastery_level_Algebra 1_input").set_value("advanced").run()
     assert not app.exception
-    assert app.session_state["level_Algebra"] == "advanced"
+    assert app.session_state["level_Algebra 1"] == "advanced"
 
     app.radio[0].set_value("Home").run()
     app.run()
     app.radio[0].set_value("Settings").run()
     assert not app.exception
-    assert app.selectbox(key="level_Algebra_input").value == "advanced"
+    assert app.selectbox(key="level_Algebra 1_input").value == "advanced"
 
     app.radio[0].set_value("Analyze").run()
     assert not app.exception
-    assert any("Algebra <strong>advanced</strong>" in element.value for element in app.markdown)
+    assert any("Algebra 1 <strong>advanced</strong>" in element.value for element in app.markdown)

@@ -26,21 +26,21 @@ def test_reference_solutions_score_full_marks(problem):
 
 
 def test_incorrect_step_is_caught():
-    problem = PROBLEMS_BY_ID["ALG-LIN-001"]
+    problem = PROBLEMS_BY_ID["ALG1-LIN-001"]
     results = evaluate_solution_steps(problem, ["2*x + 3 = 11", "2*x = 10"])
     assert results[0].is_correct
     assert not results[1].is_correct
 
 
 def test_profile_progress_and_recommendation(tmp_path):
-    profile = StudentProfile("learner", "Learner", "Grades 9-12", {"Algebra": "intermediate"})
+    profile = StudentProfile("learner", "Learner", "Grades 9-12", {"Algebra 1": "intermediate"})
     assert set(asdict(profile)) == {
         "student_id", "display_name", "grade_band", "current_levels",
         "preferred_feedback", "accessibility_notes",
     }
     db_path = tmp_path / "progress.db"
     initialize_database(db_path)
-    problem = PROBLEMS_BY_ID["ALG-LIN-001"]
+    problem = PROBLEMS_BY_ID["ALG1-LIN-001"]
     results = evaluate_solution_steps(problem, ["2*x + 3 = 11", "2*x = 10"])
     attempt_id = record_attempt(profile, problem, results, db_path)
     history = load_student_history(profile.student_id, db_path)
@@ -51,3 +51,25 @@ def test_profile_progress_and_recommendation(tmp_path):
     recommendation, ranking = recommend_next_problem(profile, db_path=db_path)
     assert recommendation.problem_id in PROBLEMS_BY_ID
     assert len(ranking) == len(PROBLEM_BANK)
+
+
+def test_legacy_skill_migration_preserves_history_and_can_repeat(tmp_path):
+    import sqlite3
+
+    db_path = tmp_path / "legacy.db"
+    initialize_database(db_path)
+    profile = StudentProfile("legacy", "Legacy learner", "Grades 9-12", {})
+    problem = PROBLEMS_BY_ID["ALG1-LIN-001"]
+    evaluations = evaluate_solution_steps(problem, [step.math for step in problem.expected_steps])
+    record_attempt(profile, problem, evaluations, db_path)
+    original = load_student_history(profile.student_id, db_path)
+
+    # Reproduce the schema used before step concepts were renamed to skills.
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("ALTER TABLE step_evaluations RENAME COLUMN skill TO concept")
+
+    initialize_database(db_path)
+    initialize_database(db_path)
+    restored = load_student_history(profile.student_id, db_path)
+    assert restored.equals(original)
+    assert not weakness_summary(profile.student_id, db_path).empty
