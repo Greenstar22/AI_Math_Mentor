@@ -397,7 +397,7 @@ def has_sign_pattern_difference(student: str, expected: str) -> bool:
     s = parse_statement(clean_math_text(student).replace(" ", ""))
     e = parse_statement(clean_math_text(expected).replace(" ", ""))
     if isinstance(s, sp.Equality) and isinstance(e, sp.Equality):
-        return (s.lhs*e.lhs == -1*s.lhs*s.lhs and s.rhs == e.rhs) or (s.rhs*e.rhs == -1*s.rhs*s.rhs and s.lhs == e.lhs)
+        return (sp.simplify(s.lhs + e.lhs) == 0 and s.rhs == e.rhs) or (sp.simplify(s.rhs + e.rhs) == 0 and s.lhs == e.lhs)
     elif not isinstance(s, sp.Equality) and not isinstance(e, sp.Equality):
         return sp.simplify(s + e) == 0
     else:
