@@ -758,7 +758,7 @@ def render_mastery() -> None:
                 else:
                     for _, row in subset.sort_values("mastery").iterrows():
                         value = max(0.0, min(1.0, float(row["mastery"])))
-                        st.markdown(f"**{str(row['skill']).replace('_', ' ').title()}** - {100 * value:.0f}% mastery")
+                        st.markdown(f"**{str(row['concept']).replace('_', ' ').title()}** - {100 * value:.0f}% mastery")
                         st.progress(value)
                         st.caption(f"{int(row['correct_steps'])}/{int(row['attempted_steps'])} correct steps | Error rate {100 * float(row['error_rate']):.0f}%")
 
