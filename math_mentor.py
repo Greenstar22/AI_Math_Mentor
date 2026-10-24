@@ -395,10 +395,16 @@ def extract_numbers(text: str) -> List[float]:
 
 def has_sign_pattern_difference(student: str, expected: str) -> bool:
     s = clean_math_text(student).replace(" ", "")
+    s_left = s.split("=")[0] if "=" in s else s
+    s_right = s.split("=")[1] if "=" in s else s
     e = clean_math_text(expected).replace(" ", "")
+    e_left = e.split("=")[0] if "=" in e else e
+    e_right = e.split("=")[1] if "=" in e else e
     s_ops = re.findall(r"[+-]", s)
     e_ops = re.findall(r"[+-]", e)
-    return s_ops != e_ops and len(s_ops) == len(e_ops)
+
+    # return (s_ops != e_ops and len(s_ops) == len(e_ops))
+    return (not ((s_left * s_right).is_positive == (e_left * e_right).is_positive))
 
 
 def build_classifier_text(student_step: str, expected_step: str, previous_step: str, skill: str, diagnostic: str) -> str:
