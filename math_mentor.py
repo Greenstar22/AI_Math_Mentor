@@ -281,7 +281,7 @@ def symbolic_equivalent(a: sp.Basic, b: sp.Basic) -> bool:
 
 ERROR_LABELS = [
     "correct", "calculation_error", "sign_error", "algebra_transformation_error",
-    "concept_gap", "incomplete_step", "format_or_parse_error",
+    "skill_gap", "incomplete_step", "format_or_parse_error",
 ]
 
 
@@ -291,7 +291,7 @@ def build_synthetic_error_dataset(seed: int = SEED) -> pd.DataFrame:
         "correct": [
             "student step {step}; expected {expected}; equivalent symbolic result; correct operation",
             "valid transformation from {previous} to {step}; equation remains balanced",
-            "correct use of {concept}; result {step}",
+            "correct use of {skill}; result {step}",
         ],
         "calculation_error": [
             "student computed {step} but expected {expected}; arithmetic value is wrong",
@@ -308,9 +308,9 @@ def build_synthetic_error_dataset(seed: int = SEED) -> pd.DataFrame:
             "invalid distribution factoring cancellation or variable isolation in {step}",
             "equation balance changed from {previous} to {step}",
         ],
-        "concept_gap": [
-            "student selected the wrong rule for {concept}; step {step}",
-            "missing understanding of {concept}; expected approach {expected}",
+        "skill_gap": [
+            "student selected the wrong rule for {skill}; step {step}",
+            "missing understanding of {skill}; expected approach {expected}",
             "used an unrelated formula in {step}",
         ],
         "incomplete_step": [
@@ -324,7 +324,7 @@ def build_synthetic_error_dataset(seed: int = SEED) -> pd.DataFrame:
             "unrecognized notation prevents symbolic evaluation: {step}",
         ],
     }
-    concepts = ["fraction addition", "inverse operations", "factoring", "power rule", "complement rule", "separation of variables", "initial condition"]
+    skills = ["fraction addition", "inverse operations", "factoring", "power rule", "complement rule", "separation of variables", "initial condition"]
     steps = ["2*x=8", "x=4", "9/12+8/12", "17/12", "3*x**2-4", "P=3/4", "y=2*exp(3*t)", "(x-2)*(x-3)=0"]
     wrong_steps = ["2*x=14", "x=-4", "9/12+8/12=17/24", "3*x**2+4", "P=1/4", "y=2+exp(3*t)", "x**2-6=0", "2*x+3=8"]
     rows = []
@@ -334,8 +334,8 @@ def build_synthetic_error_dataset(seed: int = SEED) -> pd.DataFrame:
             step = correct_step if label == "correct" else rng.choice(wrong_steps)
             expected = rng.choice(steps)
             previous = rng.choice(steps)
-            concept = rng.choice(concepts)
-            text = rng.choice(label_templates).format(step=step, expected=expected, previous=previous, concept=concept)
+            skill = rng.choice(skills)
+            text = rng.choice(label_templates).format(step=step, expected=expected, previous=previous, skill=skill)
             if i % 3 == 0:
                 text += f"; topic {rng.choice(['algebra', 'calculus', 'probability', 'fractions', 'differential equations'])}"
             rows.append({"text": text, "label": label})
@@ -401,8 +401,8 @@ def has_sign_pattern_difference(student: str, expected: str) -> bool:
     return s_ops != e_ops and len(s_ops) == len(e_ops)
 
 
-def build_classifier_text(student_step: str, expected_step: str, previous_step: str, concept: str, diagnostic: str) -> str:
-    return f"student step {student_step}; expected {expected_step}; previous {previous_step}; concept {concept}; diagnostic {diagnostic}"
+def build_classifier_text(student_step: str, expected_step: str, previous_step: str, skill: str, diagnostic: str) -> str:
+    return f"student step {student_step}; expected {expected_step}; previous {previous_step}; skill {skill}; diagnostic {diagnostic}"
 
 
 def ml_error_prediction(text: str) -> Tuple[str, float]:
@@ -420,7 +420,7 @@ def dnn_error_prediction(text: str) -> Tuple[str, float]:
     return str(label), float(probabilities[idx])
 
 
-def classify_incorrect_step(student_step: str, expected_step: str, previous_step: str, concept: str, parse_exception: Optional[Exception] = None) -> Tuple[str, float, str]:
+def classify_incorrect_step(student_step: str, expected_step: str, previous_step: str, skill: str, parse_exception: Optional[Exception] = None) -> Tuple[str, float, str]:
     if parse_exception is not None:
         return "format_or_parse_error", 0.99, "The notation could not be parsed. Use one mathematical statement per line and explicit operators when needed."
     stripped = clean_math_text(student_step)
@@ -435,13 +435,13 @@ def classify_incorrect_step(student_step: str, expected_step: str, previous_step
         expected_letters = re.sub(r"[-+]?\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)?", "N", clean_math_text(expected_step))
         if student_letters.replace(" ", "") == expected_letters.replace(" ", ""):
             return "calculation_error", 0.90, "The operation pattern is plausible, but one or more numerical calculations do not match."
-    diagnostic_text = build_classifier_text(student_step, expected_step, previous_step, concept, "symbolically not equivalent")
+    diagnostic_text = build_classifier_text(student_step, expected_step, previous_step, skill, "symbolically not equivalent")
     ml_label, ml_conf = ml_error_prediction(diagnostic_text)
     dnn_label, dnn_conf = dnn_error_prediction(diagnostic_text)
     if ml_label == dnn_label:
-        return ml_label, min(0.95, 0.55 + 0.45 * max(ml_conf, dnn_conf)), f"Both learned classifiers identified this as {ml_label.replace('_', ' ')}. Review the expected concept and compare each transformation."
-    if concept in {"power_rule", "complement_rule", "separation", "integration", "initial_condition", "factoring"}:
-        return "concept_gap", 0.62, f"The step does not match the expected use of {concept.replace('_', ' ')}. Review that concept before retrying."
+        return ml_label, min(0.95, 0.55 + 0.45 * max(ml_conf, dnn_conf)), f"Both learned classifiers identified this as {ml_label.replace('_', ' ')}. Review the expected skill and compare each transformation."
+    if skill in {"power_rule", "complement_rule", "separation", "integration", "initial_condition", "factoring"}:
+        return "skill_gap", 0.62, f"The step does not match the expected use of {skill.replace('_', ' ')}. Review that skill before retrying."
     return "algebra_transformation_error", 0.60, "The transformation is not symbolically equivalent to the expected step. Check whether the same legal operation was applied throughout."
 
 
@@ -553,7 +553,7 @@ def initialize_database(db_path: Path = DB_PATH) -> None:
             step_evaluation_id INTEGER PRIMARY KEY AUTOINCREMENT, attempt_id INTEGER NOT NULL,
             student_step_index INTEGER NOT NULL, submitted_step TEXT NOT NULL, expected_step TEXT,
             is_correct INTEGER NOT NULL, error_type TEXT NOT NULL, confidence REAL NOT NULL,
-            concept TEXT NOT NULL, explanation TEXT NOT NULL,
+            skill TEXT NOT NULL, explanation TEXT NOT NULL,
             FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id)
         );
         CREATE TABLE IF NOT EXISTS feedback_events (
@@ -588,7 +588,7 @@ def record_attempt(profile: StudentProfile, problem: MathProblem, evaluations: S
         )
         attempt_id = int(cursor.lastrowid)
         conn.executemany("""
-            INSERT INTO step_evaluations (attempt_id, student_step_index, submitted_step, expected_step, is_correct, error_type, confidence, concept, explanation)
+            INSERT INTO step_evaluations (attempt_id, student_step_index, submitted_step, expected_step, is_correct, error_type, confidence, skill, explanation)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
             (attempt_id, e.student_step_index, e.student_step, e.expected_step, int(e.is_correct), e.error_type, e.confidence, e.skill, e.explanation)
@@ -600,7 +600,7 @@ def record_attempt(profile: StudentProfile, problem: MathProblem, evaluations: S
 def load_student_history(student_id: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     query = """
         SELECT a.attempt_id, a.problem_id, a.topic, a.difficulty, a.overall_score, a.submitted_at,
-               s.student_step_index, s.is_correct, s.error_type, s.confidence, s.concept
+               s.student_step_index, s.is_correct, s.error_type, s.confidence, s.skill,
         FROM attempts a JOIN step_evaluations s ON a.attempt_id = s.attempt_id
         WHERE a.student_id = ? ORDER BY a.submitted_at, s.student_step_index
     """
@@ -611,8 +611,8 @@ def load_student_history(student_id: str, db_path: Path = DB_PATH) -> pd.DataFra
 def weakness_summary(student_id: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     history = load_student_history(student_id, db_path)
     if history.empty:
-        return pd.DataFrame(columns=["topic", "concept", "attempted_steps", "correct_steps", "error_rate", "mastery"])
-    grouped = history.groupby(["topic", "concept"], as_index=False).agg(
+        return pd.DataFrame(columns=["topic", "skill", "attempted_steps", "correct_steps", "error_rate", "mastery"])
+    grouped = history.groupby(["topic", "skill"], as_index=False).agg(
         attempted_steps=("is_correct", "size"), correct_steps=("is_correct", "sum"), avg_difficulty=("difficulty", "mean")
     )
     grouped["error_rate"] = 1.0 - grouped["correct_steps"] / grouped["attempted_steps"]
@@ -685,7 +685,7 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
             "calculation_error": "Recalculate only the numerical part. Which arithmetic operation changed the value?",
             "sign_error": "What should happen to the sign when you move or simplify this term?",
             "algebra_transformation_error": "Did you apply the same legal operation to every required part of the expression or equation?",
-            "concept_gap": f"Which rule governs {skill_name}, and what conditions must be true before using it?",
+            "skill_gap": f"Which rule governs {skill_name}, and what conditions must be true before using it?",
             "incomplete_step": "What mathematical statement would make this line complete?",
             "format_or_parse_error": "Can you rewrite this as one explicit expression or equation using an equals sign?",
         }
@@ -695,7 +695,7 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
             "calculation_error": "Parallel example: 2a + 3 = 11 becomes 2a = 8 after subtracting 3 from both sides.",
             "sign_error": "Parallel example: -(x - 2) expands to -x + 2, because the negative sign multiplies both terms.",
             "algebra_transformation_error": "Parallel example: from 3z = 12, divide both sides by 3 to obtain z = 4.",
-            "concept_gap": f"Review a small example of {skill_name}, then apply the same rule to your current line.",
+            "skill_gap": f"Review a small example of {skill_name}, then apply the same rule to your current line.",
             "incomplete_step": "Parallel example: instead of writing '2x =', finish the statement as '2x = 8'.",
             "format_or_parse_error": "Use a format such as '2*x + 3 = 11' or '3*x**2 - 4'.",
         }
@@ -704,7 +704,7 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
         "calculation_error": "Recheck the arithmetic before continuing.",
         "sign_error": "Audit every plus and minus sign.",
         "algebra_transformation_error": "Preserve equivalence by applying a valid operation consistently.",
-        "concept_gap": f"Review the {skill_name} rule.",
+        "skill_gap": f"Review the {skill_name} rule.",
         "incomplete_step": "Complete the expression or equation.",
         "format_or_parse_error": "Rewrite using explicit mathematical notation.",
     }

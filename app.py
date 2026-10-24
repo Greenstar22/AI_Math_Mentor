@@ -552,7 +552,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
             st.markdown(
                 f"""
                 <div class="mm-panel" style="margin-bottom:.7rem;padding:1rem">
-                    <div style="display:flex;justify-content:space-between;gap:1rem"><strong>{esc(row['topic'])}: {esc(str(row['concept']).replace('_', ' '))}</strong><span class="mm-meta">{100 * value:.0f}% mastery</span></div>
+                    <div style="display:flex;justify-content:space-between;gap:1rem"><strong>{esc(row['topic'])}: {esc(str(row['skill']).replace('_', ' '))}</strong><span class="mm-meta">{100 * value:.0f}% mastery</span></div>
                     <div class="mm-progress-track"><div class="mm-progress-fill" style="width:{100 * value:.1f}%"></div></div>
                 </div>
                 """,
@@ -758,7 +758,7 @@ def render_mastery() -> None:
                 else:
                     for _, row in subset.sort_values("mastery").iterrows():
                         value = max(0.0, min(1.0, float(row["mastery"])))
-                        st.markdown(f"**{str(row['concept']).replace('_', ' ').title()}** - {100 * value:.0f}% mastery")
+                        st.markdown(f"**{str(row['skill']).replace('_', ' ').title()}** - {100 * value:.0f}% mastery")
                         st.progress(value)
                         st.caption(f"{int(row['correct_steps'])}/{int(row['attempted_steps'])} correct steps | Error rate {100 * float(row['error_rate']):.0f}%")
 
