@@ -473,11 +473,11 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
                     matched_index = j
                     break
         if matched_index is not None:
-            skipped = [s.math for s in problem.expected_steps[next_expected_index:matched_index]]
+            # skipped = [s.math for s in problem.expected_steps[next_expected_index:matched_index]]
             expected = problem.expected_steps[matched_index]
             explanation = "This step is mathematically equivalent to the expected step."
-            if skipped:
-                explanation += " It is correct, but some explanatory steps were skipped."
+            if matched_index > next_expected_index:
+                explanation += " It is correct, but some intermediary steps were skipped."
             result = StepEvaluation(
                 student_step_index=student_index, student_step=raw_step, matched_expected_index=matched_index,
                 expected_step=expected.math, is_correct=True, error_type="correct", confidence=0.99,
