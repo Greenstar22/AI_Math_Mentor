@@ -103,7 +103,6 @@ PROBLEM_BANK: List[MathProblem] = [
             ExpectedStep("x = 4", "balanced_division", "Divide both sides by 2."),
         ],
         final_answer="x = 4",
-        skills=["inverse operations", "equation balance", "variable isolation"],
         hints=["Undo the +3 first.", "Apply the same operation to both sides."],
     ),
     MathProblem(
