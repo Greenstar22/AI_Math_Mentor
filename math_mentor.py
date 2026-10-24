@@ -473,7 +473,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
                     matched_index = j
                     break
         if matched_index is not None:
-            # skipped = [s.math for s in problem.expected_steps[next_expected_index:matched_index]]
+            skipped = [s.math for s in problem.expected_steps[next_expected_index:matched_index]]
             expected = problem.expected_steps[matched_index]
             explanation = "This step is mathematically equivalent to the expected step."
             if matched_index > next_expected_index:
