@@ -423,7 +423,7 @@ def dnn_error_prediction(text: str) -> Tuple[str, float]:
     return str(label), float(probabilities[idx])
 
 
-def classify_incorrect_step(student_step: str, expected_step: str, previous_step: str, skill: str, parse_exception: Optional[Exception] = None) -> Tuple[str, float, str]:
+def classify_incorrect_step(student_step: str, expected_step: str, previous_step: str, skill: str, parse_exception: Optional[Exception] = None, matching_expected_path: bool = True) -> Tuple[str, float, str]:
     if parse_exception is not None:
         return "format_or_parse_error", 0.99, "The notation could not be parsed. Use one mathematical statement per line and explicit operators when needed."
     stripped = clean_math_text(student_step)
@@ -442,6 +442,8 @@ def classify_incorrect_step(student_step: str, expected_step: str, previous_step
     ml_label, ml_conf = ml_error_prediction(diagnostic_text)
     dnn_label, dnn_conf = dnn_error_prediction(diagnostic_text)
     if ml_label == dnn_label:
+        if ml_label == "correct":
+            return "unclassified", min(0.95, 0.55 + 0.45 * max(ml_conf, dnn_conf)), f"Both learned classifiers identified this as {ml_label.replace('_', ' ')}. Your error was not able to be classified."
         return ml_label, min(0.95, 0.55 + 0.45 * max(ml_conf, dnn_conf)), f"Both learned classifiers identified this as {ml_label.replace('_', ' ')}. Review the expected skill and compare each transformation."
     if skill in {"power_rule", "complement_rule", "separation", "integration", "initial_condition", "factoring"}:
         return "skill_gap", 0.62, f"The step does not match the expected use of {skill.replace('_', ' ')}. Review that skill before retrying."
@@ -457,7 +459,8 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             expected_parsed.append(None)
     results: List[StepEvaluation] = []
     next_expected_index = 0
-    previous_student_step = "start of solution"
+    previous_student_step = None
+    matching_expected_path = True
     for student_index, raw_step in enumerate(student_steps, start=1):
         raw_step = str(raw_step).strip()
         if not raw_step:
@@ -467,7 +470,12 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             parse_exception = None
         except Exception as exc:
             parsed_student = None
+            parsed_previous = None
             parse_exception = exc
+        try:
+            parsed_previous = parse_statement(previous_student_step) if previous_student_step else None
+        except Exception:
+            parsed_previous = None
         matched_index = None
         if parsed_student is not None:
             for j in range(next_expected_index, len(problem.expected_steps)):
@@ -487,12 +495,25 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
                 skill=expected.skill, explanation=explanation, skipped_expected_steps=skipped,
             )
             next_expected_index = matched_index + 1
+            matching_expected_path = True
+        elif parsed_student is not None and parsed_previous is not None and symbolic_equivalent(parsed_student, parsed_previous):
+            target_index = min(next_expected_index, len(problem.expected_steps) - 1)
+            expected = problem.expected_steps[target_index]
+            if matching_expected_path:
+                label, confidence, explanation = "valid alternative", 0.99, "The transformation is mathematically valid, but does not match the expected solution path."
+            else:
+                label, confidence, explanation = "carry-on error", 0.99, "The transformation is mathematically valid, but does not match the expected solution path due to a previous deviation."
+            result = StepEvaluation(
+                student_step_index=student_index, student_step=raw_step, matched_expected_index=None,
+                expected_step=expected.math, is_correct=True, error_type=label, confidence=confidence,
+                skill=expected.skill, explanation=explanation,
+            )
         else:
             target_index = min(next_expected_index, len(problem.expected_steps) - 1)
             expected = problem.expected_steps[target_index]
             label, confidence, explanation = classify_incorrect_step(
                 student_step=raw_step, expected_step=expected.math, previous_step=previous_student_step,
-                skill=expected.skill, parse_exception=parse_exception,
+                skill=expected.skill, parse_exception=parse_exception, matching_expected_path=matching_expected_path,
             )
             result = StepEvaluation(
                 student_step_index=student_index, student_step=raw_step, matched_expected_index=None,
@@ -501,6 +522,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
                 parse_error=str(parse_exception) if parse_exception else None,
             )
             next_expected_index += 1
+            matching_expected_path = False
         results.append(result)
         previous_student_step = raw_step
     return results
