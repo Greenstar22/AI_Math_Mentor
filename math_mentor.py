@@ -500,6 +500,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
                 skill=expected.skill, explanation=explanation,
                 parse_error=str(parse_exception) if parse_exception else None,
             )
+            next_expected_index += 1
         results.append(result)
         previous_student_step = raw_step
     return results
