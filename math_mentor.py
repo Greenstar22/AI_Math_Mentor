@@ -600,7 +600,7 @@ def record_attempt(profile: StudentProfile, problem: MathProblem, evaluations: S
 def load_student_history(student_id: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     query = """
         SELECT a.attempt_id, a.problem_id, a.topic, a.difficulty, a.overall_score, a.submitted_at,
-               s.student_step_index, s.is_correct, s.error_type, s.confidence, s.skill,
+               s.student_step_index, s.is_correct, s.error_type, s.confidence, s.skill
         FROM attempts a JOIN step_evaluations s ON a.attempt_id = s.attempt_id
         WHERE a.student_id = ? ORDER BY a.submitted_at, s.student_step_index
     """
