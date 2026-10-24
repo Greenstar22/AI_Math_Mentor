@@ -561,7 +561,6 @@ def initialize_database(db_path: Path = DB_PATH) -> None:
             context_key TEXT NOT NULL, feedback_style TEXT NOT NULL, reward REAL NOT NULL,
             created_at TEXT NOT NULL
         );
-        ALTER TABLE step_evaluations RENAME COLUMN concept TO skill;
         """)
 
 

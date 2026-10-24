@@ -773,11 +773,11 @@ def render_mastery() -> None:
             .drop_duplicates("attempt_id")
             .sort_values("attempt_id", ascending=False)
         )
-        st.dataframe(attempt_summary, use_container_width=True, hide_index=True)
+        st.dataframe(attempt_summary, width="stretch", hide_index=True)
         if not summary.empty:
-            chart = summary[["topic", "concept", "mastery"]].copy()
-            chart["skill"] = chart["topic"] + ": " + chart["concept"].str.replace("_", " ")
-            st.markdown("### Concept mastery comparison")
+            chart = summary[["topic", "skills", "mastery"]].copy()
+            chart["skill"] = chart["topic"] + ": " + chart["skill"].str.replace("_", " ")
+            st.markdown("### Skill mastery comparison")
             st.bar_chart(chart.set_index("skill")["mastery"])
 
 
