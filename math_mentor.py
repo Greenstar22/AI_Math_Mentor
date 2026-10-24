@@ -710,6 +710,8 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
     skill_name = evaluation.skill.replace("_", " ")
     expected = evaluation.expected_step or "the next valid transformation"
     if evaluation.is_correct:
+        if evaluation.error_type == "carry-on error":
+            return f"Correct. Your step is mathematically valid, but it does not match the expected solution path due to a previous deviation. Review the earlier steps and try to align with the expected transformations."
         return f"Correct. Your step preserves the mathematics and demonstrates {skill_name}. Continue to the next transformation."
     if style == "socratic":
         prompts = {
