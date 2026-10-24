@@ -34,7 +34,7 @@ LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"]
 TOPICS = sorted({problem.topic for problem in PROBLEM_BANK})
 
 DEFAULT_STEPS = {
-    "ALG1-Frac-001": "3/4 + 2/3\n9/12 + 8/12\n17/12\n1 + 5/12",
+    "ALG1-FRAC-001": "3/4 + 2/3\n9/12 + 8/12\n17/12\n1 + 5/12",
     "ALG1-LIN-001": "2*x + 3 = 11\n2*x = 8\nx = 4",
     "ALG1-QUAD-001": "x**2 - 5*x + 6 = 0\n(x - 2)*(x - 3) = 0\nx = 2\nx = 3",
     "CALC-POLYDERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
@@ -59,11 +59,11 @@ def initialize_state() -> None:
         "preferred_feedback": "socratic",
         "school_class": "",
         "accessibility_notes": "",
-        "problem_selector": "ALG-QUAD-001",
+        "problem_selector": "ALG1-QUAD-001",
         "feedback_recorded": False,
     }
     for topic in TOPICS:
-        defaults[f"level_{topic}"] = "intermediate" if topic in {"Algebra", "Probability"} else "beginner"
+        defaults[f"level_{topic}"] = "intermediate" if topic in {"Algebra 1"} else "beginner"
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
@@ -398,7 +398,7 @@ def render_profile_strip(profile: StudentProfile) -> None:
     chips.extend(
         f"{esc(topic)} <strong>{esc(level)}</strong>"
         for topic, level in profile.current_levels.items()
-        if topic in {"Algebra", "Calculus", "Probability", "Differential Equations"}
+        if topic in {"Algebra 1", "Calculus", "Differential Equations"}
     )
     st.markdown(
         '<div class="mm-profile-strip">' + "".join(f'<div class="mm-chip">{item}</div>' for item in chips) + "</div>",

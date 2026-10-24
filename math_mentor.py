@@ -561,7 +561,9 @@ def initialize_database(db_path: Path = DB_PATH) -> None:
             context_key TEXT NOT NULL, feedback_style TEXT NOT NULL, reward REAL NOT NULL,
             created_at TEXT NOT NULL
         );
+        ALTER TABLE step_evaluations RENAME COLUMN concept TO skill;
         """)
+
 
 
 def upsert_student(profile: StudentProfile, db_path: Path = DB_PATH) -> None:
@@ -629,7 +631,7 @@ def recommend_next_problem(profile: StudentProfile, student_id: Optional[str] = 
     weak_concepts = defaultdict(float)
     for _, row in weaknesses.iterrows():
         weak_topics[row["topic"]] = max(weak_topics[row["topic"]], float(row["error_rate"]))
-        weak_concepts[row["concept"]] = max(weak_concepts[row["concept"]], float(row["error_rate"]))
+        weak_concepts[row["skill"]] = max(weak_concepts[row["skill"]], float(row["error_rate"]))
     scored = []
     for problem in PROBLEM_BANK:
         stated_level = normalize_level(profile.current_levels.get(problem.topic, "entry"))
