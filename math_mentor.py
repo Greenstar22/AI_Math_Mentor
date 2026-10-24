@@ -52,7 +52,7 @@ class StudentProfile:
 @dataclass
 class ExpectedStep:
     math: str
-    concept: str
+    skill: str
     explanation: str
 
 
@@ -60,54 +60,56 @@ class ExpectedStep:
 class MathProblem:
     problem_id: str
     topic: str
-    subtopic: str
+    concept: str
     grade_band: str
     difficulty: int
     prompt: str
     expected_steps: List[ExpectedStep]
     final_answer: str
-    skills: List[str]
     hints: List[str]
+
+    @property
+    def skills(self) -> List[str]:
+        return list(dict.fromkeys(step.skill for step in self.expected_steps))
 
 
 PROBLEM_BANK: List[MathProblem] = [
     MathProblem(
-        problem_id="ARITH-001",
-        topic="Arithmetic",
-        subtopic="Fractions",
+        problem_id="ALG1-FRAC-001",
+        topic="Algebra 1",
+        concept="Fractions",
         grade_band="Grades 5-7",
         difficulty=1,
-        prompt="Compute 3/4 + 2/3. Show a common-denominator step and simplify.",
+        prompt="Compute 3/4 + 2/3. Show a common-denominator step and represent your answer as a mixed fraction.",
         expected_steps=[
-            ExpectedStep("3/4 + 2/3", "identify_operation", "Identify the two fractions to add."),
-            ExpectedStep("9/12 + 8/12", "common_denominator", "Rewrite both fractions with denominator 12."),
-            ExpectedStep("17/12", "add_numerators", "Add the numerators while keeping the denominator."),
+            ExpectedStep("3/4 + 2/3", "equation_setup", "Identify the two fractions to add."),
+            ExpectedStep("9/12 + 8/12", "least_common_denominator", "Rewrite both fractions with denominator 12."),
+            ExpectedStep("17/12", "simplification", "Add the numerators while keeping the denominator."),
             ExpectedStep("1 + 5/12", "mixed_number", "Convert the improper fraction to a mixed number."),
         ],
-        final_answer="17/12",
-        skills=["fraction addition", "least common denominator", "simplification"],
+        final_answer="1 + 5/12",
         hints=["The least common denominator of 4 and 3 is 12.", "Multiply 3/4 by 3/3 and 2/3 by 4/4."],
     ),
     MathProblem(
-        problem_id="ALG-LIN-001",
-        topic="Algebra",
-        subtopic="Linear equations",
+        problem_id="ALG1-LIN-001",
+        topic="Algebra 1",
+        concept="Linear equations",
         grade_band="Grades 7-10",
         difficulty=1,
         prompt="Solve 2x + 3 = 11. Show each algebraic transformation.",
         expected_steps=[
             ExpectedStep("2*x + 3 = 11", "equation_setup", "Restate the equation."),
-            ExpectedStep("2*x = 8", "inverse_operation", "Subtract 3 from both sides."),
-            ExpectedStep("x = 4", "isolate_variable", "Divide both sides by 2."),
+            ExpectedStep("2*x = 8", "balanced_subtraction", "Subtract 3 from both sides."),
+            ExpectedStep("x = 4", "balanced_division", "Divide both sides by 2."),
         ],
         final_answer="x = 4",
         skills=["inverse operations", "equation balance", "variable isolation"],
         hints=["Undo the +3 first.", "Apply the same operation to both sides."],
     ),
     MathProblem(
-        problem_id="ALG-QUAD-001",
-        topic="Algebra",
-        subtopic="Quadratic equations",
+        problem_id="ALG1-QUAD-001",
+        topic="Algebra 1",
+        concept="Quadratic equations",
         grade_band="Grades 9-12",
         difficulty=2,
         prompt="Solve x^2 - 5x + 6 = 0 by factoring.",
@@ -118,13 +120,12 @@ PROBLEM_BANK: List[MathProblem] = [
             ExpectedStep("x = 3", "zero_product_property", "Set the second factor equal to zero."),
         ],
         final_answer="x = 2 or x = 3",
-        skills=["factoring", "zero-product property", "quadratic roots"],
         hints=["Find two numbers whose product is 6 and sum is -5.", "Use the zero-product property after factoring."],
     ),
     MathProblem(
-        problem_id="CALC-DERIV-001",
+        problem_id="CALC-POLYDERIV-001",
         topic="Calculus",
-        subtopic="Polynomial derivatives",
+        concept="Polynomial derivatives",
         grade_band="College / AP",
         difficulty=2,
         prompt="Differentiate f(x) = x^3 - 4x + 7 with respect to x.",
@@ -134,29 +135,28 @@ PROBLEM_BANK: List[MathProblem] = [
             ExpectedStep("3*x**2 - 4", "simplification", "Simplify the derivative."),
         ],
         final_answer="3*x**2 - 4",
-        skills=["power rule", "constant rule", "symbolic simplification"],
         hints=["d/dx(x^n) = n*x^(n-1).", "The derivative of a constant is zero."],
     ),
     MathProblem(
-        problem_id="PROB-001",
-        topic="Probability",
-        subtopic="Complement rule",
+        problem_id="ALG1-PROB-001",
+        topic="Algebra 1",
+        concept="Probability",
         grade_band="Grades 9-12 / College",
         difficulty=2,
         prompt="Two fair coins are tossed. Find the probability of at least one head using the complement rule.",
         expected_steps=[
-            ExpectedStep("P_none = (1/2)**2", "independence", "Compute the probability of no heads."),
+            ExpectedStep("P_none = (1/2)**2", "independence_property", "Compute the probability of no heads."),
             ExpectedStep("P_at_least_one = 1 - P_none", "complement_rule", "Use the complement rule."),
+            ExpectedStep("P_at_least_one = 1 - (1/2)**2", "substitution", "Substitute the value of P_none."),
             ExpectedStep("P_at_least_one = 3/4", "simplification", "Simplify the probability."),
         ],
         final_answer="3/4",
-        skills=["independent events", "complement rule", "probability simplification"],
         hints=["The complement of at least one head is zero heads.", "P(TT) = 1/2 times 1/2."],
     ),
     MathProblem(
         problem_id="DE-EXP-001",
         topic="Differential Equations",
-        subtopic="First-order separable equations",
+        concept="First-order separable equations",
         grade_band="College",
         difficulty=3,
         prompt="Solve dy/dt = 3y with y(0) = 2. Show separation, integration, and the initial-condition step.",
@@ -167,7 +167,6 @@ PROBLEM_BANK: List[MathProblem] = [
             ExpectedStep("y = 2*exp(3*t)", "initial_condition", "Use y(0) = 2."),
         ],
         final_answer="y = 2*exp(3*t)",
-        skills=["separation of variables", "integration", "initial conditions", "exponential solutions"],
         hints=["Move y to the left before integrating.", "After exponentiating, use the initial condition to find C."],
     ),
 ]
@@ -375,7 +374,7 @@ class StepEvaluation:
     is_correct: bool
     error_type: str
     confidence: float
-    concept: str
+    skill: str
     explanation: str
     skipped_expected_steps: List[str] = field(default_factory=list)
     parse_error: Optional[str] = None
@@ -483,7 +482,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             result = StepEvaluation(
                 student_step_index=student_index, student_step=raw_step, matched_expected_index=matched_index,
                 expected_step=expected.math, is_correct=True, error_type="correct", confidence=0.99,
-                concept=expected.concept, explanation=explanation, skipped_expected_steps=skipped,
+                skill=expected.skill, explanation=explanation, skipped_expected_steps=skipped,
             )
             next_expected_index = matched_index + 1
         else:
@@ -491,12 +490,12 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             expected = problem.expected_steps[target_index]
             label, confidence, explanation = classify_incorrect_step(
                 student_step=raw_step, expected_step=expected.math, previous_step=previous_student_step,
-                concept=expected.concept, parse_exception=parse_exception,
+                skill=expected.skill, parse_exception=parse_exception,
             )
             result = StepEvaluation(
                 student_step_index=student_index, student_step=raw_step, matched_expected_index=None,
                 expected_step=expected.math, is_correct=False, error_type=label, confidence=confidence,
-                concept=expected.concept, explanation=explanation,
+                skill=expected.skill, explanation=explanation,
                 parse_error=str(parse_exception) if parse_exception else None,
             )
         results.append(result)
@@ -523,7 +522,7 @@ def evaluations_to_frame(evaluations: Sequence[StepEvaluation]) -> pd.DataFrame:
             "correct": e.is_correct,
             "error_type": e.error_type,
             "confidence": round(e.confidence, 3),
-            "concept": e.concept,
+            "skill": e.skill,
             "expected": e.expected_step,
             "explanation": e.explanation,
         }
@@ -593,7 +592,7 @@ def record_attempt(profile: StudentProfile, problem: MathProblem, evaluations: S
             INSERT INTO step_evaluations (attempt_id, student_step_index, submitted_step, expected_step, is_correct, error_type, confidence, concept, explanation)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
-            (attempt_id, e.student_step_index, e.student_step, e.expected_step, int(e.is_correct), e.error_type, e.confidence, e.concept, e.explanation)
+            (attempt_id, e.student_step_index, e.student_step, e.expected_step, int(e.is_correct), e.error_type, e.confidence, e.skill, e.explanation)
             for e in evaluations
         ])
     return attempt_id
@@ -602,7 +601,7 @@ def record_attempt(profile: StudentProfile, problem: MathProblem, evaluations: S
 def load_student_history(student_id: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     query = """
         SELECT a.attempt_id, a.problem_id, a.topic, a.difficulty, a.overall_score, a.submitted_at,
-               s.student_step_index, s.is_correct, s.error_type, s.confidence, s.concept
+               s.student_step_index, s.is_correct, s.error_type, s.confidence, s.skill
         FROM attempts a JOIN step_evaluations s ON a.attempt_id = s.attempt_id
         WHERE a.student_id = ? ORDER BY a.submitted_at, s.student_step_index
     """
@@ -638,7 +637,7 @@ def recommend_next_problem(profile: StudentProfile, student_id: Optional[str] = 
         target = LEVEL_TO_DIFFICULTY[stated_level]
         score = 2.0 - abs(problem.difficulty - target)
         score += 2.5 * weak_topics.get(problem.topic, 0.0)
-        score += sum(0.8 * weak_concepts.get(step.concept, 0.0) for step in problem.expected_steps)
+        score += sum(0.8 * weak_concepts.get(step.skill, 0.0) for step in problem.expected_steps)
         if problem.problem_id not in attempted_problem_ids:
             score += 0.4
         scored.append((score, problem))
@@ -678,16 +677,16 @@ FEEDBACK_BANDIT = FeedbackBandit(epsilon=0.15)
 
 
 def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str) -> str:
-    concept_name = evaluation.concept.replace("_", " ")
+    skill_name = evaluation.skill.replace("_", " ")
     expected = evaluation.expected_step or "the next valid transformation"
     if evaluation.is_correct:
-        return f"Correct. Your step preserves the mathematics and demonstrates {concept_name}. Continue to the next transformation."
+        return f"Correct. Your step preserves the mathematics and demonstrates {skill_name}. Continue to the next transformation."
     if style == "socratic":
         prompts = {
             "calculation_error": "Recalculate only the numerical part. Which arithmetic operation changed the value?",
             "sign_error": "What should happen to the sign when you move or simplify this term?",
             "algebra_transformation_error": "Did you apply the same legal operation to every required part of the expression or equation?",
-            "concept_gap": f"Which rule governs {concept_name}, and what conditions must be true before using it?",
+            "concept_gap": f"Which rule governs {skill_name}, and what conditions must be true before using it?",
             "incomplete_step": "What mathematical statement would make this line complete?",
             "format_or_parse_error": "Can you rewrite this as one explicit expression or equation using an equals sign?",
         }
@@ -697,7 +696,7 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
             "calculation_error": "Parallel example: 2a + 3 = 11 becomes 2a = 8 after subtracting 3 from both sides.",
             "sign_error": "Parallel example: -(x - 2) expands to -x + 2, because the negative sign multiplies both terms.",
             "algebra_transformation_error": "Parallel example: from 3z = 12, divide both sides by 3 to obtain z = 4.",
-            "concept_gap": f"Review a small example of {concept_name}, then apply the same rule to your current line.",
+            "concept_gap": f"Review a small example of {skill_name}, then apply the same rule to your current line.",
             "incomplete_step": "Parallel example: instead of writing '2x =', finish the statement as '2x = 8'.",
             "format_or_parse_error": "Use a format such as '2*x + 3 = 11' or '3*x**2 - 4'.",
         }
@@ -706,7 +705,7 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
         "calculation_error": "Recheck the arithmetic before continuing.",
         "sign_error": "Audit every plus and minus sign.",
         "algebra_transformation_error": "Preserve equivalence by applying a valid operation consistently.",
-        "concept_gap": f"Review the {concept_name} rule.",
+        "concept_gap": f"Review the {skill_name} rule.",
         "incomplete_step": "Complete the expression or equation.",
         "format_or_parse_error": "Rewrite using explicit mathematical notation.",
     }
@@ -770,7 +769,7 @@ def report_to_markdown(report: Dict[str, Any]) -> str:
             f"- Submitted: `{evaluation['student_step']}`",
             f"- Expected target: `{evaluation['expected_step']}`",
             f"- Category: `{evaluation['error_type']}`",
-            f"- Concept: `{evaluation['concept']}`",
+            f"- Skill: `{evaluation['skill']}`",
             f"- Diagnosis: {evaluation['explanation']}",
             f"- Mentor response ({feedback_by_step[evaluation['student_step_index']]['style']}): {feedback_by_step[evaluation['student_step_index']]['feedback']}", "",
         ])

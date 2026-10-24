@@ -34,11 +34,11 @@ LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"]
 TOPICS = sorted({problem.topic for problem in PROBLEM_BANK})
 
 DEFAULT_STEPS = {
-    "ARITH-001": "3/4 + 2/3\n9/12 + 8/12\n17/12\n1 + 5/12",
-    "ALG-LIN-001": "2*x + 3 = 11\n2*x = 8\nx = 4",
-    "ALG-QUAD-001": "x**2 - 5*x + 6 = 0\n(x - 2)*(x - 3) = 0\nx = 2\nx = 3",
-    "CALC-DERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
-    "PROB-001": "P_none = (1/2)**2\nP_at_least_one = 1 - P_none\nP_at_least_one = 3/4",
+    "ALG1-Frac-001": "3/4 + 2/3\n9/12 + 8/12\n17/12\n1 + 5/12",
+    "ALG1-LIN-001": "2*x + 3 = 11\n2*x = 8\nx = 4",
+    "ALG1-QUAD-001": "x**2 - 5*x + 6 = 0\n(x - 2)*(x - 3) = 0\nx = 2\nx = 3",
+    "CALC-POLYDERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
+    "ALG1-PROB-001": "P_none = (1/2)**2\nP_at_least_one = 1 - P_none\nP_at_least_one = 1 - (1/2)**2\nP_at_least_one = 3/4",
     "DE-EXP-001": "1/y\nlog(y) = 3*t + C\ny = C*exp(3*t)\ny = 2*exp(3*t)",
 }
 
@@ -511,7 +511,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
             detail = f"""
                 <div class="mm-detail-grid">
                     <div class="mm-detail"><div class="mm-label">Expected step</div><div class="mm-detail-value">{esc(evaluation['expected_step'])}</div></div>
-                    <div class="mm-detail"><div class="mm-label">Concept</div><div class="mm-detail-value">{esc(evaluation['concept'].replace('_', ' '))}</div></div>
+                    <div class="mm-detail"><div class="mm-label">Skill</div><div class="mm-detail-value">{esc(evaluation['skill'].replace('_', ' '))}</div></div>
                 </div>"""
         st.markdown(
             f"""
@@ -592,7 +592,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
 
     with st.expander("Open the diagnostic table"):
         frame = pd.DataFrame(report["evaluations"])
-        visible = ["student_step_index", "student_step", "is_correct", "error_type", "confidence", "concept", "expected_step"]
+        visible = ["student_step_index", "student_step", "is_correct", "error_type", "confidence", "skill", "expected_step"]
         st.dataframe(frame[visible], use_container_width=True, hide_index=True)
 
 
@@ -624,7 +624,7 @@ def render_analyze() -> None:
             <div class="mm-problem">
                 <div class="mm-meta">Your problem</div>
                 <div class="mm-problem-text">{esc(problem.prompt)}</div>
-                <div class="mm-meta">Concept {esc(problem.subtopic)} / Skills {esc(' / '.join(problem.skills))}</div>
+                <div class="mm-meta">Concept {esc(problem.concept)} / Skills {esc(' / '.join(problem.skills))}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -632,7 +632,7 @@ def render_analyze() -> None:
         with st.expander("Hints and learning targets"):
             for index, hint in enumerate(problem.hints, start=1):
                 st.markdown(f"**Hint {index}:** {hint}")
-            st.caption("Expected learning pathway: " + " -> ".join(step.concept.replace("_", " ") for step in problem.expected_steps))
+            st.caption("Expected learning pathway: " + " -> ".join(step.skill.replace("_", " ") for step in problem.expected_steps))
 
         solution_key = f"solution_steps_{problem_id}"
         solution = st.text_area(
@@ -754,11 +754,11 @@ def render_mastery() -> None:
                     available = [p for p in PROBLEM_BANK if p.topic == topic]
                     st.info("No saved attempts for this topic yet.")
                     for item in available:
-                        st.markdown(f"**{item.subtopic}** - difficulty {item.difficulty}: {item.prompt}")
+                        st.markdown(f"**{item.concept}** - difficulty {item.difficulty}: {item.prompt}")
                 else:
                     for _, row in subset.sort_values("mastery").iterrows():
                         value = max(0.0, min(1.0, float(row["mastery"])))
-                        st.markdown(f"**{str(row['concept']).replace('_', ' ').title()}** - {100 * value:.0f}% mastery")
+                        st.markdown(f"**{str(row['skill']).replace('_', ' ').title()}** - {100 * value:.0f}% mastery")
                         st.progress(value)
                         st.caption(f"{int(row['correct_steps'])}/{int(row['attempted_steps'])} correct steps | Error rate {100 * float(row['error_rate']):.0f}%")
 
@@ -809,7 +809,7 @@ def render_about() -> None:
         <section class="mm-section">
             <div class="mm-kicker">The learning problem</div>
             <h2 class="mm-section-title">Feedback should respond to <span class="mm-accent">your work</span></h2>
-            <p class="mm-lead">Many tools provide a final answer, a generic video, or a broad hint. MathMentor AI instead reads the learner's submitted pathway, identifies the first mathematically meaningful divergence, names the type of mistake, and connects the correction to the underlying concept.</p>
+            <p class="mm-lead">Many tools provide simply a final answer, a generic video, or a broad hint. MathMentor AI instead reads the learner's submitted pathway, identifies the first mathematically meaningful divergence, names the type of mistake, and connects the correction to the underlying skill.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -850,7 +850,7 @@ def render_about() -> None:
     st.markdown("### Technology and prototype boundaries")
     t1, t2, t3 = st.columns(3)
     with t1:
-        st.markdown("**Mathematics**\n\nSymPy parsing, symbolic equivalence, expected-step trajectories, concept tags, and deterministic validation.")
+        st.markdown("**Mathematics**\n\nSymPy parsing, symbolic equivalence, expected-step trajectories, skill tags, and deterministic validation.")
     with t2:
         st.markdown("**AI and analytics**\n\nRule-assisted diagnosis, TF-IDF plus logistic regression, compact MLP classifier, weakness analytics, recommendation scoring, and an epsilon-greedy feedback bandit.")
     with t3:
