@@ -452,11 +452,14 @@ def classify_incorrect_step(student_step: str, expected_step: str, previous_step
 
 def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) -> List[StepEvaluation]:
     expected_parsed: List[Optional[sp.Basic]] = []
+    expected_cleaned: List[Optional[str]] = []
     for expected in problem.expected_steps:
         try:
             expected_parsed.append(parse_statement(expected.math))
+            expected_cleaned.append(clean_math_text(expected.math))
         except Exception:
             expected_parsed.append(None)
+            expected_cleaned.append(None)
     results: List[StepEvaluation] = []
     next_expected_index = 0
     previous_student_step = None
@@ -467,10 +470,11 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             continue
         try:
             parsed_student = parse_statement(raw_step)
+            cleaned_student = clean_math_text(raw_step)
             parse_exception = None
         except Exception as exc:
             parsed_student = None
-            parsed_previous = None
+            cleaned_student = None
             parse_exception = exc
         try:
             parsed_previous = parse_statement(previous_student_step) if previous_student_step else None
@@ -480,7 +484,8 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
         if parsed_student is not None:
             for j in range(next_expected_index, len(problem.expected_steps)):
                 expected_obj = expected_parsed[j]
-                if expected_obj is not None and parsed_student == expected_obj:  # symbolic_equivalent(parsed_student, expected_obj):
+                cleaned_expected = expected_cleaned[j]
+                if cleaned_expected is not None and cleaned_student == cleaned_expected:  # symbolic_equivalent(parsed_student, expected_obj):
                     matched_index = j
                     break
         if matched_index is not None:
