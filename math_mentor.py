@@ -717,6 +717,8 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
     if evaluation.is_correct:
         if evaluation.error_type == "carry-on error":
             return f"Correct. Your step is mathematically valid, but it does not match the expected solution path due to a previous deviation. Review the earlier steps and try to align with the expected transformations."
+        if evaluation.error_type == "valid additional step":
+            return f"Correct. Your step preserves the mathematics and contributes towards demonstrating {skill_name}. However, this step is not completely necessary. Continue to the next transformation."
         return f"Correct. Your step preserves the mathematics and demonstrates {skill_name}. Continue to the next transformation."
     if style == "socratic":
         prompts = {
