@@ -505,7 +505,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             target_index = min(next_expected_index, len(problem.expected_steps) - 1)
             expected = problem.expected_steps[target_index]
             if matching_expected_path:
-                label, confidence, explanation = "valid alternative", 0.99, "The transformation is mathematically valid, but does not match the expected solution path."
+                label, confidence, explanation = "valid additional step", 0.99, "The transformation is mathematically valid, but does not match the expected solution path."
             else:
                 label, confidence, explanation = "carry-on error", 0.99, "The transformation is mathematically valid, but does not match the expected solution path due to a previous deviation."
             result = StepEvaluation(
