@@ -91,6 +91,22 @@ PROBLEM_BANK: List[MathProblem] = [
         hints=["The least common denominator of 4 and 3 is 12.", "Multiply 3/4 by 3/3 and 2/3 by 4/4."],
     ),
     MathProblem(
+            problem_id="ALG1-EXP-001",
+            topic="Algebra 1",
+            concept="Exponents",
+            grade_band="Grades 7-9",
+            difficulty=2,
+            prompt="Solve for x: ((9/16)^2)/((3/4)^3)",
+            expected_steps=[
+                ExpectedStep("((9/16)^2)/((3/4)^3)", "equation_setup", "Identify the structure of the expression."),
+                ExpectedStep("(((3/4)^2)^2)/((3/4)^3)", "same_base", "Rewrite both fractions with the same base."),
+                ExpectedStep("((3/4)^4)/((3/4)^3)", "simplification", "Multiply the exponents of the numerator."),
+                ExpectedStep("3/4", "exponent_division", "Divide the numerator by the denominator as per the exponent division rule."),
+            ],
+            final_answer="3/4",
+            hints=["Convert both exponentials to the same base.", "Use the exponent division rule to simplify."],
+        ),
+    MathProblem(
         problem_id="ALG1-LIN-001",
         topic="Algebra 1",
         concept="Linear equations",
@@ -104,6 +120,22 @@ PROBLEM_BANK: List[MathProblem] = [
         ],
         final_answer="x = 4",
         hints=["Undo the +3 first.", "Apply the same operation to both sides."],
+    ),
+    MathProblem(
+            problem_id="ALG1-LIN-002",
+            topic="Algebra 1",
+            concept="Linear equations",
+            grade_band="Grades 7-10",
+            difficulty=1,
+            prompt="Find the slope of the line: 16y + 98x = 39.",
+            expected_steps=[
+                ExpectedStep("16*y + 98*x = 39", "equation_setup", "Restate the equation."),
+                ExpectedStep("16*y = -98*x + 39", "balanced_subtraction", "Subtract 98*x from both sides."),
+                ExpectedStep("y = (-98/16)*x + 39/16", "balanced_division", "Divide both sides by 16."),
+                ExpectedStep("-98/16", "slope_identification", "Identify the slope from the coefficient of x."),
+            ],
+            final_answer="-98/16",
+            hints=["Convert the equation to slope-intercept form.", "The slope of a line is the coefficient of x of the equation in slope-intercept form."],
     ),
     MathProblem(
         problem_id="ALG1-QUAD-001",
@@ -121,6 +153,24 @@ PROBLEM_BANK: List[MathProblem] = [
         final_answer="x = 2 or x = 3",
         hints=["Find two numbers whose product is 6 and sum is -5.", "Use the zero-product property after factoring."],
     ),
+    MathProblem(
+            problem_id="ALG1-QUAD-002",
+            topic="Algebra 1",
+            concept="Quadratic equations",
+            grade_band="Grades 9-12",
+            difficulty=2,
+            prompt="Find the y-coordinate of the vertex of the parabola y = x^2 - 5x + 6.",
+            expected_steps=[
+                ExpectedStep("y = x**2 - 5*x + 6", "equation_setup", "Restate the quadratic equation."),
+                ExpectedStep("x = -b/(2*a)", "vertex_formula", "Apply the vertex formula."),
+                ExpectedStep("x = --5/(2*1)", "substitution", "Substitute a = 1 and b = -5."),
+                ExpectedStep("x = 5/2", "simplification", "Simplify the expression."),
+                ExpectedStep("y = (5/2)**2 - 5*(5/2) + 6", "substitution", "Substitute x = 5/2 into the equation."),
+                ExpectedStep("y = -1/4", "simplification", "Simplify the expression."),
+            ],
+            final_answer="y = -1/4.",
+            hints=["Use the formula for the x-coordinate of the vertex for a parabola in standard form.", "Substitute the x-coordinate into the equation of the parabola to find the y-coordinate."],
+        ),
     MathProblem(
         problem_id="CALC-POLYDERIV-001",
         topic="Calculus",
@@ -140,7 +190,7 @@ PROBLEM_BANK: List[MathProblem] = [
         problem_id="ALG1-PROB-001",
         topic="Algebra 1",
         concept="Probability",
-        grade_band="Grades 9-12 / College",
+        grade_band="Grades 9-12",
         difficulty=2,
         prompt="Two fair coins are tossed. Find the probability of at least one head using the complement rule.",
         expected_steps=[
@@ -167,7 +217,7 @@ PROBLEM_BANK: List[MathProblem] = [
         ],
         final_answer="y = 2*exp(3*t)",
         hints=["Move y to the left before integrating.", "After exponentiating, use the initial condition to find C."],
-    ),
+    )
 ]
 
 PROBLEMS_BY_ID = {p.problem_id: p for p in PROBLEM_BANK}
