@@ -480,7 +480,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
         if parsed_student is not None:
             for j in range(next_expected_index, len(problem.expected_steps)):
                 expected_obj = expected_parsed[j]
-                if expected_obj is not None and symbolic_equivalent(parsed_student, expected_obj):
+                if expected_obj is not None and parsed_student == expected_obj:  # symbolic_equivalent(parsed_student, expected_obj):
                     matched_index = j
                     break
         if matched_index is not None:
