@@ -41,6 +41,7 @@ DEFAULT_STEPS = {
     "ALG1-QUAD-001": "x**2 - 5*x + 6 = 0\n(x - 2)*(x - 3) = 0\nx = 2\nx = 3",
     "ALG1-QUAD-002": "y = x**2 - 5*x + 6\nx=-b/(2*a)\nx = --5/(2*1)\nx = 5/2\ny = (5/2)**2 - 5*(5/2) + 6\ny = -1/4",
     "ALG1-PROB-001": "P_none = (1/2)**2\nP_at_least_one = 1 - P_none\nP_at_least_one = 1 - (1/2)**2\nP_at_least_one = 3/4",
+    "PRCL-CONIC-001": "x^2 + 8x + y^2 + 6y = 0\nx^2 + 8x + 16 + y^2 + 6y + 9 = 16 + 9\n(x + 4)^2 + (y + 3)^2 = 25\n(x - h)^2 + (y - k)^2 = r^2\nh = -4, k = -3\n|(-4) - (-3)|\n1",
     "CALC-POLYDERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
     "CALC-DE-001": "1/y\nlog(y) = 3*t + C\ny = C*exp(3*t)\ny = 2*exp(3*t)",
 }
