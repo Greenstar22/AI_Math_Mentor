@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import html
 import json
 import random
@@ -20,16 +19,18 @@ from math_mentor import (
     PROBLEM_BANK,
     PROBLEMS_BY_ID,
     StudentProfile,
-    load_student_history,
-    record_feedback_reward,
     report_to_markdown,
-    run_mentor_attempt,
     weakness_summary,
 )
 
+from auth_service import AccountError, InvalidSession
+from account_ui import (initialize_accounts, selected_store, save_preferences, submit_analysis,
+                        render_account, render_pending, reset_local, GUEST_MESSAGE)
+from progress_store import student_profile, report_for_attempt, rebuild_bandit, new_rating
+
 GITHUB_URL = "https://github.com/qxiao2ub/AI_Math_Mentor"
 LIVE_APP_URL = "https://math-ai-mentor.streamlit.app/"
-PAGE_ORDER = ["Home", "Analyze", "Mastery", "About", "Settings"]
+PAGE_ORDER = ["Home", "Analyze", "Mastery", "About", "Settings", "Account"]
 LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"]
 TOPICS = sorted({problem.topic for problem in PROBLEM_BANK})
 
@@ -47,10 +48,11 @@ st.set_page_config(
 
 
 def initialize_state() -> None:
+    initialize_accounts(st.session_state)
     defaults: dict[str, Any] = {
         "top_nav": "Home",
         "theme": "Dark",
-        "display_name": "Demo Student",
+        "display_name": "Guest",
         "grade_band": "Grades 9-12",
         "preferred_feedback": "socratic",
         "school_class": "",
@@ -59,18 +61,13 @@ def initialize_state() -> None:
         "feedback_recorded": False,
     }
     for topic in TOPICS:
-        defaults[f"level_{topic}"] = "intermediate" if topic in {"Algebra 1"} else "beginner"
+        defaults[f"level_{topic}"] = "beginner"
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
     requested = st.session_state.pop("_nav_request", None)
     if requested in PAGE_ORDER:
         st.session_state["top_nav"] = requested
-
-
-def safe_student_id(display_name: str) -> str:
-    base = (display_name or "student").strip().lower().encode("utf-8")
-    return "streamlit_" + hashlib.sha256(base).hexdigest()[:12]
 
 
 def esc(value: Any) -> str:
@@ -83,31 +80,35 @@ def go_to(page: str) -> None:
 
 
 def current_profile() -> StudentProfile:
-    return StudentProfile(
-        student_id=safe_student_id(st.session_state["display_name"]),
-        display_name=st.session_state["display_name"] or "Student",
-        grade_band=st.session_state["grade_band"],
-        current_levels={topic: st.session_state[f"level_{topic}"] for topic in TOPICS},
-        preferred_feedback=st.session_state["preferred_feedback"],
-        accessibility_notes=st.session_state["accessibility_notes"],
-    )
+    store = selected_store(st.session_state)
+    return student_profile(store.owner_id, store.load_profile())
+
 
 def update_current_profile() -> None:
-    st.session_state["display_name"] = st.session_state["display_name_input"]
-    st.session_state["grade_band"] = st.session_state["grade_band_input"]
-    st.session_state["school_class"] = st.session_state["school_class_input"]
-    st.session_state["preferred_feedback"] = st.session_state["preferred_feedback_input"]
-    st.session_state["accessibility_notes"] = st.session_state["accessibility_notes_input"]
-    for topic in TOPICS:
-        st.session_state[f"level_{topic}"] = st.session_state[f"level_{topic}_input"]
+    changes = {key: st.session_state[f"{key}_input"] for key in
+               ("display_name", "grade_band", "school_class", "preferred_feedback", "accessibility_notes")}
+    changes["current_levels"] = {topic: st.session_state[f"level_{topic}_input"] for topic in TOPICS}
+    try:
+        save_preferences(st.session_state, changes)
+        st.session_state["settings_notice"] = "Learner settings saved."
+    except (AccountError, ValueError) as exc:
+        st.session_state["settings_error"] = str(exc)
 
 
 def update_topic_level(topic: str) -> None:
-    st.session_state[f"level_{topic}"] = st.session_state[f"mastery_level_{topic}_input"]
+    try:
+        levels = {t: st.session_state[f"level_{t}"] for t in TOPICS}
+        levels[topic] = st.session_state[f"mastery_level_{topic}_input"]
+        save_preferences(st.session_state, {"current_levels": levels})
+    except (AccountError, ValueError) as exc:
+        st.session_state["settings_error"] = str(exc)
 
 
 def update_theme() -> None:
-    st.session_state["theme"] = st.session_state["theme_input"]
+    try:
+        save_preferences(st.session_state, {"theme": st.session_state["theme_input"]})
+    except (AccountError, ValueError) as exc:
+        st.session_state["settings_error"] = str(exc)
 
 
 def inject_css() -> None:
@@ -556,19 +557,27 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
             )
 
     incorrect = [evaluation for evaluation in report["evaluations"] if not evaluation["is_correct"]]
-    if incorrect and not st.session_state.get("feedback_recorded", False):
-        st.caption("Help the adaptive feedback prototype learn which response style works for this error type.")
+    store = selected_store(st.session_state)
+    saved_ids = {a["attempt_id"] for a in store.load_attempts()}
+    rated = {(r["attempt_id"], r["student_step_index"]) for r in store.load_feedback_events()}
+    if incorrect and report["attempt_id"] in saved_ids:
         first = incorrect[0]
         first_feedback = feedback_by_step[first["student_step_index"]]
-        b1, b2 = st.columns(2)
-        if b1.button("Feedback was helpful", key=f"helpful_{report.get('attempt_id')}", use_container_width=True):
-            record_feedback_reward(profile.student_id, first["error_type"], first_feedback["style"], 1.0)
-            st.session_state["feedback_recorded"] = True
-            st.success("Feedback preference recorded for this prototype session.")
-        if b2.button("Feedback needs improvement", key=f"unhelpful_{report.get('attempt_id')}", use_container_width=True):
-            record_feedback_reward(profile.student_id, first["error_type"], first_feedback["style"], -1.0)
-            st.session_state["feedback_recorded"] = True
-            st.info("Feedback preference recorded for this prototype session.")
+        if (report["attempt_id"], first["student_step_index"]) not in rated:
+            st.caption("Rate the saved feedback for this step.")
+            b1, b2 = st.columns(2)
+            helpful = b1.button("Feedback was helpful", key=f"helpful_{report['attempt_id']}")
+            unhelpful = b2.button("Feedback needs improvement", key=f"unhelpful_{report['attempt_id']}")
+            if helpful or unhelpful:
+                try:
+                    inserted = store.record_feedback(report["attempt_id"], new_rating(first, first_feedback["style"], 1 if helpful else -1))
+                    st.session_state["bandit"] = rebuild_bandit(store)
+                    st.session_state["feedback_recorded"] = True
+                    st.success("Feedback rating saved." if inserted else "A rating was already saved for this step.")
+                except InvalidSession:
+                    raise
+                except (AccountError, ValueError) as exc:
+                    st.error(str(exc))
 
     d1, d2 = st.columns(2)
     d1.download_button(
@@ -590,6 +599,10 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
         frame = pd.DataFrame(report["evaluations"])
         visible = ["student_step_index", "student_step", "is_correct", "error_type", "confidence", "skill", "expected_step"]
         st.dataframe(frame[visible], use_container_width=True, hide_index=True)
+
+
+def remember_solution(problem_id: str) -> None:
+    st.session_state.setdefault("solution_drafts", {})[problem_id] = st.session_state[f"solution_steps_{problem_id}"]
 
 
 def render_analyze() -> None:
@@ -633,13 +646,15 @@ def render_analyze() -> None:
         solution_key = f"solution_steps_{problem_id}"
         solution = st.text_area(
             "Your solution - one mathematical step per line",
-            value=DEFAULT_STEPS.get(problem_id, ""),
+            value=st.session_state.get("solution_drafts", {}).get(problem_id, DEFAULT_STEPS.get(problem_id, "")),
             height=220,
             key=solution_key,
+            on_change=remember_solution,
+            args=(problem_id,),
             help="Use explicit notation such as 2*x + 3 = 11, x^2, x**2, exp(3*t), or Derivative(expression, x).",
         )
         a1, a2 = st.columns([1.25, 1])
-        analyze = a1.button("Analyze my solution ->", type="primary", use_container_width=True)
+        analyze = a1.button("Analyze my solution ->", type="primary", use_container_width=True, disabled=bool(st.session_state.get("guest_import")))
         if a2.button("Choose a random problem", use_container_width=True):
             alternatives = [p.problem_id for p in PROBLEM_BANK if p.problem_id != problem_id]
             st.session_state["_problem_request"] = random.choice(alternatives)
@@ -655,7 +670,7 @@ def render_analyze() -> None:
                     1. Parse each line with SymPy.<br><br>
                     2. Compare it with the expected mathematical pathway.<br><br>
                     3. Diagnose errors with transparent rules plus ML and DNN classifiers.<br><br>
-                    4. Save the attempt to SQLite.<br><br>
+                    4. Save progress for this session or account.<br><br>
                     5. Update weakness and mastery estimates.<br><br>
                     6. Select a feedback style and recommend the next problem.
                 </div>
@@ -674,11 +689,13 @@ def render_analyze() -> None:
         else:
             try:
                 with st.spinner("Checking the mathematical pathway and building feedback..."):
-                    report = run_mentor_attempt(profile, problem_id, steps, save=True)
+                    report = submit_analysis(st.session_state, problem_id, steps)
                 st.session_state["last_report"] = report
-                st.session_state["feedback_recorded"] = False
-            except Exception as exc:
-                st.error(f"The prototype could not analyze this submission: {exc}")
+                st.success("Saved to your account" if st.session_state.get("auth_session") else "Saved for this guest session.")
+            except InvalidSession:
+                raise
+            except (AccountError, ValueError):
+                st.warning("Analysis complete ? not saved. Retry saving." if st.session_state.get("pending_attempts") else "Analysis could not complete. Please retry.")
 
     report = st.session_state.get("last_report")
     if report and report.get("problem", {}).get("problem_id") == problem_id:
@@ -706,8 +723,8 @@ def render_mastery() -> None:
         "See progress by topic, select a starting level, inspect concept performance, and use recorded attempts to focus future practice.",
     )
     profile = current_profile()
-    history = load_student_history(profile.student_id)
-    summary = weakness_summary(profile.student_id)
+    history = selected_store(st.session_state).load_history()
+    summary = weakness_summary(history=history)
 
     if history.empty:
         attempts = 0
@@ -767,9 +784,15 @@ def render_mastery() -> None:
         attempt_summary = (
             history[["attempt_id", "problem_id", "topic", "difficulty", "overall_score", "submitted_at"]]
             .drop_duplicates("attempt_id")
-            .sort_values("attempt_id", ascending=False)
+            .sort_values(["submitted_at", "attempt_id"], ascending=False)
         )
         st.dataframe(attempt_summary, width="stretch", hide_index=True)
+        saved_attempts = selected_store(st.session_state).load_attempts()
+        reopened = st.selectbox("Reopen a saved attempt", [a["attempt_id"] for a in reversed(saved_attempts)])
+        if st.button("Open saved review"):
+            saved = next(a for a in saved_attempts if a["attempt_id"] == reopened)
+            st.markdown(saved["problem_snapshot"]["prompt"])
+            render_review(report_for_attempt(selected_store(st.session_state), saved), profile)
         if not summary.empty:
             chart = summary[["topic", "skill", "mastery"]].copy()
             chart["skill"] = chart["topic"] + ": " + chart["skill"].str.replace("_", " ")
@@ -850,8 +873,8 @@ def render_about() -> None:
     with t2:
         st.markdown("**AI and analytics**\n\nRule-assisted diagnosis, TF-IDF plus logistic regression, compact MLP classifier, weakness analytics, recommendation scoring, and an epsilon-greedy feedback bandit.")
     with t3:
-        st.markdown("**Product platform**\n\nStreamlit, Python, pandas, SQLite, responsive CSS, downloadable reports, GitHub deployment, and preserved React/Tailwind design source.")
-    st.warning("Educational prototype only. The starter problem bank is intentionally small, cloud SQLite storage can reset on redeploy, and the product is not a substitute for a qualified teacher or formal assessment system.")
+        st.markdown("**Product platform**\n\nStreamlit, Python, pandas, Supabase, responsive CSS, downloadable reports, GitHub deployment, and preserved React/Tailwind design source.")
+    st.warning("Educational prototype only. The starter problem bank is intentionally small, guest progress lasts only for the current session, and the product is not a substitute for a qualified teacher or formal assessment system.")
 
     st.markdown('<section class="mm-section"><div class="mm-kicker">Feedback and collaboration</div><h2 class="mm-section-title">Tell us what to improve <span class="mm-accent">next</span></h2></section>', unsafe_allow_html=True)
     with st.form("feedback_form", clear_on_submit=True):
@@ -888,13 +911,13 @@ def render_settings() -> None:
         st.session_state.setdefault(f"level_{topic}_input", st.session_state[f"level_{topic}"])
     with st.form("profile_form"):
         p1, p2 = st.columns(2)
-        p1.text_input("Display name", key="display_name_input")
+        p1.text_input("Display name", key="display_name_input", max_chars=80)
         p2.selectbox(
             "Grade band",
             ["Grades 5-7", "Grades 7-10", "Grades 9-12", "Grades 9-12 / College", "College / AP", "College"],
             key="grade_band_input",
         )
-        p1.text_input("School / class (optional)", key="school_class_input")
+        p1.text_input("School / class (optional)", key="school_class_input", max_chars=120)
         p2.selectbox(
             "Preferred feedback style",
             FEEDBACK_STYLES,
@@ -903,7 +926,7 @@ def render_settings() -> None:
         )
         st.text_area(
             "Accessibility or learning notes (optional)",
-            key="accessibility_notes_input",
+            key="accessibility_notes_input", max_chars=1000,
             help="Examples: shorter explanations, more worked examples, larger chunks, or extra notation reminders.",
         )
         st.markdown("### Current topic level")
@@ -914,14 +937,14 @@ def render_settings() -> None:
         saved = st.form_submit_button(
             "Save learner settings", type="primary", on_click=update_current_profile,
         )
-        if saved:
-            st.success("Learner settings saved for this browser session.")
+        if saved and st.session_state.get("settings_notice"):
+            st.success(st.session_state.pop("settings_notice"))
 
     st.markdown("## Data and privacy")
     profile = current_profile()
-    history = load_student_history(profile.student_id)
+    history = selected_store(st.session_state).load_history()
     st.markdown(
-        "This prototype stores attempts in a local SQLite file on the running server. On Streamlit Community Cloud, that storage is ephemeral and may reset when the app restarts or redeploys. A production version should use authenticated accounts, a managed database, encryption, retention controls, and child-safety review."
+        "Guest work lasts only for this session. Signed-in progress is saved to your Supabase account. Email ownership is not verified, and password recovery is unavailable in this prototype."
     )
     if not history.empty:
         st.download_button(
@@ -933,7 +956,11 @@ def render_settings() -> None:
     else:
         st.caption("No attempt history is currently available for this learner profile.")
 
-    st.info("This prototype intentionally does not collect or save passwords, payment data, or account credentials.")
+    store = selected_store(st.session_state)
+    st.download_button("Download full session history (JSON)",
+                       data=json.dumps({"attempts": store.load_attempts(), "feedback_events": store.load_feedback_events()}, ensure_ascii=False, indent=2),
+                       file_name="mathmentor_history.json", mime="application/json")
+    st.caption("Passwords are sent only to Supabase Auth and cleared from form state after submission.")
 
 
 def render_footer(snapshot: CounterSnapshot) -> None:
@@ -953,20 +980,49 @@ def render_footer(snapshot: CounterSnapshot) -> None:
 
 
 initialize_state()
+try:
+    store = selected_store(st.session_state)  # Validate before rendering any private session data.
+    st.session_state["bandit"] = rebuild_bandit(store)
+except InvalidSession:
+    reset_local(st.session_state)
+    st.session_state["account_notice"] = "Your session is no longer valid. Sign in again. Unsaved account work was cleared."
+    st.rerun()
+except AccountError as exc:
+    st.error(str(exc))
+    if st.button("Retry account connection"):
+        st.rerun()
+    if st.button("Clear local access and sign out"):
+        from account_ui import sign_out
+        success = sign_out(st.session_state)
+        st.session_state["account_notice"] = "Local access cleared." if success else "Local access cleared. Remote sign-out failed."
+        st.rerun()
+    st.stop()
 inject_css()
 visitor_snapshot = current_visit_snapshot()
 render_visit_bar(visitor_snapshot)
 page = render_navigation()
-
-if page == "Home":
-    render_home()
-elif page == "Analyze":
-    render_analyze()
-elif page == "Mastery":
-    render_mastery()
-elif page == "About":
-    render_about()
-elif page == "Settings":
-    render_settings()
-
+session = st.session_state.get("auth_session")
+st.caption(f"Signed in as {session.email}" if session else GUEST_MESSAGE)
+if st.session_state.get("settings_error"):
+    st.error(st.session_state.pop("settings_error"))
+try:
+    render_pending()
+    if page == "Home":
+        render_home()
+    elif page == "Analyze":
+        render_analyze()
+    elif page == "Mastery":
+        render_mastery()
+    elif page == "About":
+        render_about()
+    elif page == "Settings":
+        render_settings()
+    elif page == "Account":
+        render_account()
+except InvalidSession:
+    reset_local(st.session_state)
+    st.session_state["account_notice"] = "Your session is no longer valid. Sign in again."
+    st.rerun()
+except AccountError as exc:
+    st.error(str(exc))
 render_footer(visitor_snapshot)

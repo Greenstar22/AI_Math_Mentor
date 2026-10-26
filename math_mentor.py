@@ -36,7 +36,6 @@ np.random.seed(SEED)
 WORK_DIR = Path.cwd()
 DB_PATH = WORK_DIR / "ai_math_mentor.db"
 EXPORT_DIR = WORK_DIR / "ai_math_mentor_exports"
-EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -1365,8 +1364,9 @@ def load_student_history(student_id: str, db_path: Path = DB_PATH) -> pd.DataFra
         return pd.read_sql_query(query, conn, params=(student_id,))
 
 
-def weakness_summary(student_id: str, db_path: Path = DB_PATH) -> pd.DataFrame:
-    history = load_student_history(student_id, db_path)
+def weakness_summary(student_id: str = "", db_path: Path = DB_PATH, *, history: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+    if history is None:
+        history = load_student_history(student_id, db_path)
     if history.empty:
         return pd.DataFrame(columns=["topic", "skill", "attempted_steps", "correct_steps", "error_rate", "mastery"])
     grouped = history.groupby(["topic", "skill"], as_index=False).agg(
@@ -1378,10 +1378,10 @@ def weakness_summary(student_id: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     return grouped.sort_values(["mastery", "attempted_steps"], ascending=[True, False]).reset_index(drop=True)
 
 
-def recommend_next_problem(profile: StudentProfile, student_id: Optional[str] = None, attempted_problem_ids: Optional[Iterable[str]] = None, db_path: Path = DB_PATH) -> Tuple[MathProblem, pd.DataFrame]:
+def recommend_next_problem(profile: StudentProfile, student_id: Optional[str] = None, attempted_problem_ids: Optional[Iterable[str]] = None, db_path: Path = DB_PATH, *, history: Optional[pd.DataFrame] = None) -> Tuple[MathProblem, pd.DataFrame]:
     student_id = student_id or profile.student_id
     attempted_problem_ids = set(attempted_problem_ids or [])
-    weaknesses = weakness_summary(student_id, db_path)
+    weaknesses = weakness_summary(student_id, db_path, history=history)
     weak_topics = defaultdict(float)
     weak_concepts = defaultdict(float)
     for _, row in weaknesses.iterrows():
@@ -1429,9 +1429,6 @@ class FeedbackBandit:
         self.values[key] = old_value + (reward - old_value) / n
 
 
-FEEDBACK_BANDIT = FeedbackBandit(epsilon=0.15)
-
-
 def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str) -> str:
     skill_name = evaluation.skill.replace("_", " ")
     expected = evaluation.expected_step or "the next valid transformation"
@@ -1473,7 +1470,6 @@ def create_feedback(evaluation: StepEvaluation, problem: MathProblem, style: str
 
 
 def record_feedback_reward(student_id: str, context_key: str, style: str, reward: float, db_path: Path = DB_PATH) -> None:
-    FEEDBACK_BANDIT.update(context_key, style, reward)
     with get_connection(db_path) as conn:
         conn.execute(
             "INSERT INTO feedback_events (student_id, context_key, feedback_style, reward, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -1481,22 +1477,24 @@ def record_feedback_reward(student_id: str, context_key: str, style: str, reward
         )
 
 
-def run_mentor_attempt(profile: StudentProfile, problem_id: str, student_steps: Sequence[str], save: bool = True) -> Dict[str, Any]:
+def run_mentor_attempt(profile: StudentProfile, problem_id: str, student_steps: Sequence[str], save: bool = True, *, history: Optional[pd.DataFrame] = None, bandit: Optional[FeedbackBandit] = None) -> Dict[str, Any]:
     if problem_id not in PROBLEMS_BY_ID:
         raise KeyError(f"Unknown problem_id: {problem_id}")
     problem = PROBLEMS_BY_ID[problem_id]
     evaluations = evaluate_solution_steps(problem, student_steps)
     scores = solution_score(evaluations, problem)
     attempt_id = record_attempt(profile, problem, evaluations) if save else None
+    bandit = bandit if bandit is not None else FeedbackBandit()
     feedback_rows = []
     for evaluation in evaluations:
-        style = FEEDBACK_BANDIT.choose(evaluation.error_type, preferred_style=profile.preferred_feedback)
+        style = bandit.choose(evaluation.error_type, preferred_style=profile.preferred_feedback)
         feedback_rows.append({"step": evaluation.student_step_index, "style": style, "feedback": create_feedback(evaluation, problem, style)})
     attempted_ids = []
-    history = load_student_history(profile.student_id)
+    if history is None:
+        history = load_student_history(profile.student_id) if save else pd.DataFrame()
     if not history.empty:
         attempted_ids = history["problem_id"].unique().tolist()
-    recommendation, ranking = recommend_next_problem(profile, attempted_problem_ids=attempted_ids)
+    recommendation, ranking = recommend_next_problem(profile, attempted_problem_ids=attempted_ids, history=history)
     return {
         "attempt_id": attempt_id,
         "profile": asdict(profile),
@@ -1504,7 +1502,7 @@ def run_mentor_attempt(profile: StudentProfile, problem_id: str, student_steps: 
         "scores": scores,
         "evaluations": [asdict(e) for e in evaluations],
         "feedback": feedback_rows,
-        "weakness_summary": weakness_summary(profile.student_id).to_dict(orient="records"),
+        "weakness_summary": weakness_summary(history=history).to_dict(orient="records"),
         "recommended_problem": asdict(recommendation),
         "recommendation_ranking": ranking.to_dict(orient="records"),
     }
@@ -1539,6 +1537,3 @@ def report_to_markdown(report: Dict[str, Any]) -> str:
         f"**{recommendation['problem_id']}** ({recommendation['topic']}, difficulty {recommendation['difficulty']}): {recommendation['prompt']}",
     ])
     return "\n".join(lines)
-
-
-initialize_database()
