@@ -6,7 +6,7 @@ const steps = [
   {
     number: "01",
     title: "Enter the problem",
-    body: "Type or paste the math problem you're working on — algebra, calculus, statistics, anything.",
+    body: "Explore a sample problem from this demo bank. Arbitrary problem entry is not implemented.",
     visual: (
       <div className="bg-secondary border border-border p-6 md:p-8 w-full">
         <span className="text-xs uppercase tracking-wider text-muted-foreground block mb-4">

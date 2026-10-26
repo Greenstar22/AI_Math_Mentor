@@ -7,11 +7,11 @@ def main() -> None:
         display_name="Smoke Test",
         grade_band="Grades 9-12",
         current_levels={
-            "Arithmetic": "entry",
+            "Geometry": "beginner",
             "Algebra 1": "intermediate",
-            "Calculus": "entry",
-            "Probability": "intermediate",
-            "Differential Equations": "entry",
+            "Calculus": "beginner",
+            "Algebra 2": "intermediate",
+            "Precalculus": "beginner",
         },
         preferred_feedback="socratic",
     )

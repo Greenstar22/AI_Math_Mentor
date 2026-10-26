@@ -84,8 +84,8 @@ const Analyze = () => {
             Analyze
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl">
-            Solve the problem below, one step per line — MathMentor AI will
-            review every step, find mistakes, and explain how to fix them.
+            This design demo compares strings and uses mock diagnostics. It does
+            not run the Python checker or save progress to Supabase.
           </p>
         </motion.div>
 

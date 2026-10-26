@@ -1,23 +1,33 @@
-# UI Integration Notes
+# UI integration notes
 
-The supplied Vite/React UI uses TypeScript, Tailwind CSS, shadcn/ui, Framer Motion,
-React Router, Archivo Black, and Inter. Its five main views are Home, Analyze,
-Mastery, About, and Settings.
+The retained `ui_source/` Vite/React demo uses TypeScript, Tailwind, shadcn/ui,
+Framer Motion, React Router, Archivo Black and Inter. It has five design views:
+Home, Analyze, Mastery, About and Settings. It is an independent reference,
+not the frontend serving the current Streamlit app.
 
-The current app implements those views in Streamlit in `app.py`, retaining the
-black-and-cobalt palette, dark/light appearance, large headings, bordered cards,
-step feedback panels, and mastery displays. Native Streamlit controls mean this
-is a design adaptation rather than a pixel-identical React rendering.
+The current `app.py` adapts that design into native Streamlit controls and CSS,
+and now has a sixth **Account** view. `account_ui.py` provides the account forms
+and session transitions; `auth_service.py`, `progress_store.py` and
+`supabase_store.py` implement validated Supabase identity, account storage and
+session-only guest storage. `math_mentor.py` provides the reviewed 50-problem
+bank, reference/transition checks, diagnostic models and calculation formulas.
+It is not the active persistence boundary.
 
-All interface copy is English. Learner settings focus on grade band, topic
-levels, feedback preference, and learning notes. `math_mentor.py` supplies the
-Colab-derived problem bank, step analysis, persistence, and recommendations.
+The migration retains the black/cobalt palette, dark/light controls, headings,
+bordered cards, review panels and skill estimates. Native controls make this
+a design adaptation, not a pixel-identical React rendering. Interface copy is
+English, and learner settings contain no dedicated geographic or locale fields.
 
-`ui_source/` remains a design reference. Compared with the supplied ZIP, its
-substantive edits are project attribution in About and Footer and its README.
-Running that React reference separately does not connect it to the Python
-backend. Making it the active frontend would require an API integration and a
-corresponding deployment change.
+The React source has its own demonstration bank, mocked logistic/DNN functions,
+in-memory mastery, browser-local appearance preferences, placeholder account
+controls and simulated contact form. It does not call the Python checker,
+Supabase Auth, or the cloud learning store. React confidence and estimated-error
+constants are demonstration values, not measured classifier performance.
 
-See `UI_MIGRATION.md` for the retained design features and `ARCHITECTURE.md` for
-the running app's learning workflow and storage.
+Running `npm run dev` from `ui_source/` opens only that demo. Making it the active
+frontend would need an API integration and deployment decision; this audit does
+not implement one. The root Colab notebook and old cleanup report are historical
+references, not the current accounts or problem-bank implementation.
+
+See [UI_MIGRATION.md](../UI_MIGRATION.md), [ARCHITECTURE.md](ARCHITECTURE.md),
+and [ACCOUNTS_SETUP.md](ACCOUNTS_SETUP.md) for maintained behavior and setup.

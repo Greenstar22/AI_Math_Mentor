@@ -26,7 +26,7 @@ const Settings = () => {
             Settings
           </h1>
           <p className="max-w-2xl text-xl text-muted-foreground">
-            Manage your account and make MathMentor feel right for you.
+            Preview appearance controls and account placeholders in this design demo.
           </p>
         </motion.div>
 
@@ -87,7 +87,7 @@ const Settings = () => {
         >
           <h2 className="heading-display mb-2 text-3xl md:text-4xl">Account</h2>
           <p className="mb-8 text-muted-foreground">
-            Placeholder — nothing is saved yet.
+            Account and password controls are placeholders. Only appearance is saved in this browser; use the Streamlit app for real accounts.
           </p>
 
           <div className="space-y-6 border border-border bg-secondary/50 p-6 md:p-8">

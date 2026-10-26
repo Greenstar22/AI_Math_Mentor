@@ -28,8 +28,8 @@ from account_ui import (initialize_accounts, selected_store, save_preferences, s
                         render_account, render_pending, reset_local, GUEST_MESSAGE)
 from progress_store import student_profile, report_for_attempt, rebuild_bandit, new_rating
 
-GITHUB_URL = "https://github.com/qxiao2ub/AI_Math_Mentor"
-LIVE_APP_URL = "https://math-ai-mentor.streamlit.app/"
+GITHUB_URL = "https://github.com/Greenstar22/AI_Math_Mentor"
+LIVE_APP_URL = "https://math-mentorai.streamlit.app/"
 PAGE_ORDER = ["Home", "Analyze", "Mastery", "About", "Settings", "Account"]
 LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"]
 TOPICS = sorted({problem.topic for problem in PROBLEM_BANK})
@@ -316,8 +316,9 @@ def inject_css() -> None:
 
 
 def current_visit_snapshot() -> CounterSnapshot:
-    """Record one new-session visit and load a globally persisted count.
+    """Attempt one visit per retained counter state and read its persisted total.
 
+    Account/guest state resets can clear the counter flag and count again.
     The file is stored on a separate GitHub branch, never on ephemeral cloud
     disk. If the token isn't configured, the app remains usable and honestly
     displays a dash / setup message rather than pretending its total is 0.
@@ -409,7 +410,7 @@ def render_home() -> None:
         <section class="mm-hero">
             <div class="mm-kicker">Step-level mathematical feedback</div>
             <h1 class="mm-display-title">Solve it.<br><span class="mm-accent">Then understand it.</span></h1>
-            <p class="mm-lead">MathMentor AI reviews your solution step by step, pinpoints exactly where the reasoning changes, explains how to repair it, and builds a living mastery profile as you improve.</p>
+            <p class="mm-lead">MathMentor AI reviews your solution step by step, compares it with reference work, suggests possible repairs, and estimates skill progress from your saved attempts.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -436,7 +437,7 @@ def render_home() -> None:
         (
             "01",
             "Enter the problem",
-            "Choose a calibrated problem from the built-in bank. The profile and stated level help match the challenge to the learner.",
+            "Choose from 50 reviewed reference problems. Stated topic levels influence recommendations; difficulty ratings are author judgments.",
             "<div class='mm-mock-label'>Your problem</div><strong>Solve for x: 3x&sup2; - 12x + 9 = 0</strong><div style='height:4px;width:80px;background:var(--mm-primary);margin-top:1.25rem'></div>",
         ),
         (
@@ -448,7 +449,7 @@ def render_home() -> None:
         (
             "03",
             "Get targeted feedback",
-            "Each step is checked symbolically, diagnosed, explained, stored in the attempt history, and used to recommend the next problem.",
+            "Steps are compared with reference work and earlier lines. Saved attempts inform heuristic mastery and recommendations.",
             "<div class='mm-mock-label'>Review</div><span style='color:var(--mm-primary-2)'>Correct: steps 1-2</span><br><span style='color:var(--mm-danger)'>Revise: one root is missing</span>",
         ),
     ]
@@ -477,7 +478,7 @@ def render_home() -> None:
     )
     options = [
         ("Analyze", "Analyze a problem", "Open the full workspace and receive a scored, step-by-step review."),
-        ("Mastery", "View your mastery", "See attempts, weak concepts, current mastery, and topic-level progress."),
+        ("Mastery", "View your mastery", "See saved attempts, skill estimates, and topic-level progress."),
         ("About", "Explore the workflow", "Understand the symbolic, ML, database, personalization, and feedback pipeline."),
         ("Settings", "Personalize the tutor", "Set level, grade band, feedback style, accessibility notes, and appearance."),
     ]
@@ -495,6 +496,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
     c1.metric("Overall score", f"{scores['overall_score']:.1f} / 100")
     c2.metric("Step accuracy", f"{100 * scores['step_accuracy']:.1f}%")
     c3.metric("Expected-path coverage", f"{100 * scores['coverage']:.1f}%")
+    st.caption("Correct includes accepted additional transitions and carried-error transitions; these do not add reference coverage. Confidence values are uncalibrated heuristics.")
 
     feedback_by_step = {item["step"]: item for item in report["feedback"]}
     for evaluation in report["evaluations"]:
@@ -517,7 +519,7 @@ def render_review(report: dict[str, Any], profile: StudentProfile) -> None:
                     <span class="mm-label">Step {evaluation['student_step_index']}</span>
                     <span class="mm-label {label_css}">{esc(status)}</span>
                     <span class="mm-label">{esc(evaluation['error_type'].replace('_', ' '))}</span>
-                    <span class="mm-label">Confidence {100 * float(evaluation['confidence']):.0f}%</span>
+                    <span class="mm-label">Heuristic confidence {100 * float(evaluation['confidence']):.0f}%</span>
                 </div>
                 <div class="mm-submitted">{esc(evaluation['student_step'])}</div>{detail}
                 <div class="mm-mentor-note"><strong>{esc(feedback['style'].replace('_', ' ').title())}:</strong> {esc(feedback['feedback'])}<br><span style="color:var(--mm-muted)">{esc(evaluation['explanation'])}</span></div>
@@ -678,7 +680,7 @@ def render_analyze() -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.info("Prototype note: the symbolic checker is the mathematical validator. ML components diagnose likely error categories; they are not the sole source of truth.")
+        st.info("Prototype: reference matching ignores formatting whitespace but preserves operations; symbolic comparisons check the preceding line. Valid alternatives can be missed and carried errors can receive transition credit. Confidence is heuristic, not a calibrated probability.")
         if st.button("Open mastery dashboard", use_container_width=True):
             go_to("Mastery")
 
@@ -695,7 +697,7 @@ def render_analyze() -> None:
             except InvalidSession:
                 raise
             except (AccountError, ValueError):
-                st.warning("Analysis complete ? not saved. Retry saving." if st.session_state.get("pending_attempts") else "Analysis could not complete. Please retry.")
+                st.warning("Analysis complete - not saved. Retry saving." if st.session_state.get("pending_attempts") else "Analysis could not complete. Please retry.")
 
     report = st.session_state.get("last_report")
     if report and report.get("problem", {}).get("problem_id") == problem_id:
@@ -762,7 +764,7 @@ def render_mastery() -> None:
                 )
             st.progress(max(0.0, min(1.0, mastery)))
             subset = summary[summary["topic"] == topic] if not summary.empty else pd.DataFrame()
-            with st.expander("Open concept details"):
+            with st.expander("Open skill details"):
                 if subset.empty:
                     available = [p for p in PROBLEM_BANK if p.topic == topic]
                     st.info("No saved attempts for this topic yet.")
@@ -803,11 +805,11 @@ def render_mastery() -> None:
 def workflow_html() -> str:
     stages = [
         ("01", "Learner profile", "Grade band, topic level, feedback preference, and accessibility context."),
-        ("02", "Problem selection", "A calibrated problem bank supplies prompts, expected steps, concepts, skills, and hints."),
+        ("02", "Problem selection", "50 reviewed problems supply prompts, expected steps, concepts, skills, and hints; difficulty is not empirically calibrated."),
         ("03", "Step parsing", "Each submitted line is normalized and parsed into a symbolic mathematical statement."),
-        ("04", "Symbolic validation", "SymPy checks equivalence and compares the submitted pathway with expected transformations."),
+        ("04", "Reference and transition checks", "Normalized text matches reference steps; SymPy can check equivalence with the preceding submitted line."),
         ("05", "Error diagnosis", "Rules, logistic regression, and a compact neural network classify the likely error type."),
-        ("06", "Attempt history", "SQLite stores attempts and step evaluations for later analysis and reporting."),
+        ("06", "Attempt history", "Guests retain work in this session; accounts save profiles, attempts, steps, and ratings in Supabase PostgreSQL."),
         ("07", "Mastery and feedback", "Weakness estimates, a contextual bandit, and learning preferences shape the response."),
         ("08", "Next action", "The app produces a downloadable report and recommends the next targeted problem."),
     ]
@@ -828,7 +830,7 @@ def render_about() -> None:
         <section class="mm-section">
             <div class="mm-kicker">The learning problem</div>
             <h2 class="mm-section-title">Feedback should respond to <span class="mm-accent">your work</span></h2>
-            <p class="mm-lead">Many tools provide simply a final answer, a generic video, or a broad hint. MathMentor AI instead reads the learner's submitted pathway, identifies the first mathematically meaningful divergence, names the type of mistake, and connects the correction to the underlying skill.</p>
+            <p class="mm-lead">Many tools provide simply a final answer, a generic video, or a broad hint. MathMentor AI compares submitted steps with reference work and preceding lines, suggests likely error categories, and connects feedback to reference skill labels. These checks can miss valid alternatives and do not verify complete proofs.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -869,12 +871,12 @@ def render_about() -> None:
     st.markdown("### Technology and prototype boundaries")
     t1, t2, t3 = st.columns(3)
     with t1:
-        st.markdown("**Mathematics**\n\nSymPy parsing, symbolic equivalence, expected-step trajectories, skill tags, and deterministic validation.")
+        st.markdown("**Mathematics**\n\nSymPy parsing, normalized reference matching, preceding-line equivalence checks, and reference skill tags. These are limited checks, not a general proof verifier.")
     with t2:
-        st.markdown("**AI and analytics**\n\nRule-assisted diagnosis, TF-IDF plus logistic regression, compact MLP classifier, weakness analytics, recommendation scoring, and an epsilon-greedy feedback bandit.")
+        st.markdown("**AI and analytics**\n\nRule-assisted diagnosis, TF-IDF plus logistic regression, compact MLP classifier, heuristic skill estimates, recommendation scoring, and a session-specific epsilon-greedy feedback bandit trained from saved ratings.")
     with t3:
         st.markdown("**Product platform**\n\nStreamlit, Python, pandas, Supabase, responsive CSS, downloadable reports, GitHub deployment, and preserved React/Tailwind design source.")
-    st.warning("Educational prototype only. The starter problem bank is intentionally small, guest progress lasts only for the current session, and the product is not a substitute for a qualified teacher or formal assessment system.")
+    st.warning("Educational prototype only: 50 reference problems, synthetic diagnostic training data, and heuristic scores. Guest work lasts only for this session. This is not a substitute for a qualified teacher or formal assessment system.")
 
     st.markdown('<section class="mm-section"><div class="mm-kicker">Feedback and collaboration</div><h2 class="mm-section-title">Tell us what to improve <span class="mm-accent">next</span></h2></section>', unsafe_allow_html=True)
     with st.form("feedback_form", clear_on_submit=True):
@@ -883,12 +885,12 @@ def render_about() -> None:
         email = f2.text_input("Email")
         category = st.selectbox("Message type", ["Product feedback", "Bug report", "Feature idea", "Education partnership", "Other"])
         message = st.text_area("Message", height=150)
-        submitted = st.form_submit_button("Submit prototype feedback", type="primary")
+        submitted = st.form_submit_button("Validate demo feedback", type="primary")
         if submitted:
             if not message.strip():
                 st.error("Please add a short message.")
             else:
-                st.success(f"Thank you, {name or 'student'}. This demonstration form validated your {category.lower()} message locally; it does not transmit or store personal data.")
+                st.success(f"Thank you, {name or 'student'}. This demo validated your {category.lower()} fields in the current app session; no contact message was sent or stored in learning history.")
 
 
 def render_settings() -> None:
@@ -957,7 +959,7 @@ def render_settings() -> None:
         st.caption("No attempt history is currently available for this learner profile.")
 
     store = selected_store(st.session_state)
-    st.download_button("Download full session history (JSON)",
+    st.download_button("Download current learner history (JSON)",
                        data=json.dumps({"attempts": store.load_attempts(), "feedback_events": store.load_feedback_events()}, ensure_ascii=False, indent=2),
                        file_name="mathmentor_history.json", mime="application/json")
     st.caption("Passwords are sent only to Supabase Auth and cleared from form state after submission.")

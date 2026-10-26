@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import io
 import random
 import re
 import sqlite3
+import tokenize
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -946,6 +948,7 @@ def clean_math_text(text: str) -> str:
 
 
 def parse_statement(text: str) -> sp.Basic:
+    """Parse math notation; parse_expr is not a sandbox for untrusted input."""
     cleaned = clean_math_text(text)
     if not cleaned:
         raise ValueError("Empty step")
@@ -955,6 +958,20 @@ def parse_statement(text: str) -> sp.Basic:
         rhs = parse_expr(rhs_text, local_dict=LOCAL_DICT, transformations=TRANSFORMATIONS, evaluate=True)
         return sp.Eq(lhs, rhs, evaluate=False)
     return parse_expr(cleaned, local_dict=LOCAL_DICT, transformations=TRANSFORMATIONS, evaluate=True)
+
+
+def reference_tokens(text: str) -> Tuple[Tuple[int, str], ...]:
+    """Ignore formatting whitespace while preserving the reference's operations.
+
+    Token boundaries prevent merging separate names/numbers, and no symbolic
+    simplification is used: equivalent algebraic stages remain distinct.
+    """
+    ignored = {tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL, tokenize.ENDMARKER}
+    return tuple(
+        (token.type, token.string)
+        for token in tokenize.generate_tokens(io.StringIO(clean_math_text(text)).readline)
+        if token.type not in ignored
+    )
 
 
 def equation_residual(statement: sp.Basic) -> sp.Basic:
@@ -1172,11 +1189,11 @@ def classify_incorrect_step(student_step: str, expected_step: str, previous_step
 
 def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) -> List[StepEvaluation]:
     expected_parsed: List[Optional[sp.Basic]] = []
-    expected_cleaned: List[Optional[str]] = []
+    expected_cleaned: List[Optional[Tuple[Tuple[int, str], ...]]] = []
     for expected in problem.expected_steps:
         try:
             expected_parsed.append(parse_statement(expected.math))
-            expected_cleaned.append(clean_math_text(expected.math))
+            expected_cleaned.append(reference_tokens(expected.math))
         except Exception:
             expected_parsed.append(None)
             expected_cleaned.append(None)
@@ -1190,7 +1207,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             continue
         try:
             parsed_student = parse_statement(raw_step)
-            cleaned_student = clean_math_text(raw_step)
+            cleaned_student = reference_tokens(raw_step)
             parse_exception = None
         except Exception as exc:
             parsed_student = None
@@ -1205,7 +1222,7 @@ def evaluate_solution_steps(problem: MathProblem, student_steps: Sequence[str]) 
             for j in range(next_expected_index, len(problem.expected_steps)):
                 expected_obj = expected_parsed[j]
                 cleaned_expected = expected_cleaned[j]
-                if cleaned_expected is not None and cleaned_student == cleaned_expected:  # symbolic_equivalent(parsed_student, expected_obj):
+                if cleaned_expected is not None and cleaned_student == cleaned_expected:  # Token match; previous-line equivalence is checked below.
                     matched_index = j
                     break
         if matched_index is not None:
@@ -1287,6 +1304,7 @@ def get_connection(db_path: Path = DB_PATH) -> sqlite3.Connection:
 
 
 def initialize_database(db_path: Path = DB_PATH) -> None:
+    """Explicit legacy SQLite setup; normal guest/account flows do not call this."""
     with get_connection(db_path) as conn:
         conn.executescript("""
         CREATE TABLE IF NOT EXISTS students (
@@ -1478,6 +1496,8 @@ def record_feedback_reward(student_id: str, context_key: str, style: str, reward
 
 
 def run_mentor_attempt(profile: StudentProfile, problem_id: str, student_steps: Sequence[str], save: bool = True, *, history: Optional[pd.DataFrame] = None, bandit: Optional[FeedbackBandit] = None) -> Dict[str, Any]:
+    # Legacy save=True writes SQLite; the active store adapter supplies history,
+    # a session-specific bandit, and save=False. This helper is not cloud storage.
     if problem_id not in PROBLEMS_BY_ID:
         raise KeyError(f"Unknown problem_id: {problem_id}")
     problem = PROBLEMS_BY_ID[problem_id]

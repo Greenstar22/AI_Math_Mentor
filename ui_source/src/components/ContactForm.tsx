@@ -30,8 +30,8 @@ const ContactForm = () => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     toast({
-      title: "Message sent.",
-      description: "Thank you — feedback like yours shapes what gets built next.",
+      title: "Demo form validated.",
+      description: "This is a local demonstration. No contact message was sent.",
     });
 
     setFormData({ name: "", email: "", topic: "feedback", message: "" });
@@ -141,7 +141,7 @@ const ContactForm = () => {
         disabled={isSubmitting}
         className="w-full h-16 text-lg font-semibold uppercase tracking-wider bg-primary hover:bg-primary/90 text-primary-foreground"
       >
-        {isSubmitting ? "Sending..." : "Send Message"}
+        {isSubmitting ? "Validating..." : "Validate demo form"}
       </Button>
     </motion.form>
   );

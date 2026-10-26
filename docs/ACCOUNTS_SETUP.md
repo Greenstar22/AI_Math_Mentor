@@ -1,6 +1,6 @@
 # MathMentor accounts setup
 
-This implementation is local source only. No hosted migration or deployment is performed by the tests or by importing the app. Ordinary data access uses the publishable key and a server-validated user's access token. SDK version: `supabase==2.33.0`.
+This guide describes the current source. Importing the app and running offline tests do not apply hosted migrations or deploy it; actual hosted setup must be checked separately. Ordinary data access uses the publishable key and a server-validated user's access token. SDK version: `supabase==2.33.0`.
 
 ## 1. Configure Supabase Auth
 
@@ -17,15 +17,15 @@ In Supabase SQL Editor, using the database owner's SQL Editor context:
 3. Confirm `mathmentor_create_profile` is an INSERT trigger on `auth.users`. Its restricted SECURITY DEFINER function uses an empty search path and fixed defaults. The migration backfills missing profiles for existing Auth users without copying editable metadata.
 4. Confirm `save_attempts(jsonb)` and `record_feedback(uuid,jsonb)` are SECURITY INVOKER and executable only by authenticated users. Verify profile ownership/creation-time columns and server timestamps are not granted for client updates.
 
-Rerunning this migration preserves data. Existing tables with the same names but without this migration's schema marker are rejected as incompatible; review and reconcile them separately. Do not drop existing tables to bypass that error. No automatic import from local SQLite exists.
+The migration is designed to be rerunnable without dropping data; verify that behavior in a dedicated test project before relying on it. Existing tables with the same names but without this migration's schema marker are rejected as incompatible; review and reconcile them separately. Do not drop existing tables to bypass that error. No automatic import from local SQLite exists.
 
-The immutable `attempts.payload` column stores the original request for strict retry comparison. It also preserves saved verdicts, feedback, and the selected problem snapshot for history reopening. Later ratings are loaded separately from `feedback_events`. Neither learning table contains an email or password. `problem_version` is SHA-256 of UTF-8 problem JSON with sorted keys, compact separators, unescaped Unicode, and no nonfinite numbers. `scoring_version` is `v1`.
+The immutable `attempts.payload` column stores the original request for strict retry comparison. It also preserves saved verdicts, feedback, and the selected problem snapshot for history reopening. Later ratings are loaded separately from `feedback_events`. The four learning tables have no dedicated email or password columns; credentials belong to Supabase Auth. Free-text submissions and notes can still contain personal information, so avoid sensitive data. `problem_version` is SHA-256 of UTF-8 problem JSON with sorted keys, compact separators, unescaped Unicode, and no nonfinite numbers. `scoring_version` is `v1`.
 
 The attempt RPC saves a whole batch and all steps/imported ratings atomically. It serializes competing attempt IDs, compares exact JSONB payloads for retries, and rejects conflicting content. The rating RPC keeps the first successful rating per evaluated step. These protections must be checked on the actual database; offline Python fakes do not establish RLS or transaction correctness.
 
 ## 3. Configure Streamlit secrets
 
-Keep `.streamlit/secrets.toml` ignored and untracked. Preserve existing visitor-counter configuration if used. The example file contains placeholders only:
+Keep `.streamlit/secrets.toml` ignored and untracked. Preserve existing visitor-counter configuration if used. The template uses placeholder credentials and the current public app URL:
 
 ```toml
 [supabase]
@@ -34,14 +34,14 @@ publishable_key = "REPLACE_WITH_PUBLISHABLE_KEY"
 secret_key = "REPLACE_WITH_SECRET_KEY"
 
 [app]
-public_url = "https://YOUR_APP.streamlit.app"
+public_url = "https://math-mentorai.streamlit.app/"
 ```
 
-Set the actual values locally in the ignored file. For a deployment you perform later, enter the same sections in the hosting provider's private Streamlit Secrets settings; do not upload a real secrets file or put keys in a repository. `public_url` is reserved for deployment documentation; authentication does not use email redirects.
+Set the actual values locally in the ignored file. For a deployment you perform later, enter the same sections in the hosting provider's private Streamlit Secrets settings; do not upload a real secrets file or put keys in a repository. `[app].public_url` is descriptive only and is not currently read by the application. The About-page app link comes from `LIVE_APP_URL` in `app.py`; both should identify https://math-mentorai.streamlit.app/. Authentication uses no email redirects.
 
-The URL and publishable key enable login and saved progress. Missing either leaves guest mode usable and account forms disabled. Missing only the secret key leaves normal accounts usable and disables deletion with an administrator-configuration message. The secret key is read exclusively inside the isolated deletion function, after current-session validation and matching password reauthentication. It is never used for ordinary table access.
+The URL and publishable key enable login and saved progress. Missing either leaves guest mode usable and account forms disabled. Missing only the secret key leaves normal accounts usable and makes a deletion attempt report incomplete administrator configuration after reauthentication. The secret key is read exclusively inside the isolated deletion function, after current-session validation and matching password reauthentication. It is never used for ordinary table access.
 
-Install dependencies with `python -m pip install -r requirements-dev.txt`, then start locally with `python -m streamlit run app.py`.
+Use **Python 3.12**, install dependencies with `python -m pip install -r requirements-dev.txt`, then start from the repository root with `python -m streamlit run app.py`. CI and `runtime.txt` target 3.12; the actual Community Cloud interpreter is selected in deployment Advanced settings and must be checked separately.
 
 ## 4. Manual two-browser/device checks
 
@@ -52,7 +52,7 @@ Use two dedicated accounts and separate browser sessions, plus a fresh guest win
 3. Enter incorrect login details and verify a generic error. After every signup/login/deletion submission, confirm password widgets clear on the following rerun. Account email is read-only; there is no email-change or password-recovery flow.
 4. Analyze as a guest, rate feedback, then sign in. Account preferences should load first. New analysis is blocked until choosing **Save this session to my account** or **Discard guest progress**. Import preserves original attempt IDs, analysis times, steps and ratings.
 5. Sign in to account A in two browsers. Save on one, choose **Refresh saved progress** on the other, and check history/mastery. Rename A and check history remains. Give B the same display name and confirm it cannot see A's history, reports, exports or feedback state.
-6. Interrupt connectivity during saving. The report remains pending and is excluded from persisted mastery/recommendations. Restore connectivity and retry: the original ID/time/feedback is reused. Repeat after a timeout where the server may already have committed. Verify exactly one attempt and one rating per step. Try logout with pending work/imports and check its discard warning.
+6. Interrupt connectivity during saving. The report remains pending and is not intentionally added to saved-history calculations until confirmation. An ambiguous response can occur after a server commit, so that saved attempt may appear on refresh even while the client still offers an idempotent retry. Restore connectivity and retry: the original ID/time/feedback is reused. Repeat after a timeout where the server may already have committed. Verify exactly one attempt and one rating per step. Try logout with pending work/imports and check its discard warning.
 7. Reopen an older history item after editing a problem in a disposable checkout. Saved verdicts and feedback should remain unchanged; the current bank must not silently regrade it.
 8. Test token expiry/rotation and temporary network outages. Invalid identity/session clears local private state and asks for login; temporary failures block private operations without replacing the account with a guest. Logout clears local access even if remote local-scope signout fails, with an honest status message.
 9. Deletion is destructive: use only a separately designated disposable account. Wrong password, a reauthenticated UUID mismatch, or a missing administrator key must prevent deletion. Correct DELETE confirmation and password should hard-delete that UUID and cascade learning records. Manually recreate the same email afterward: its new UUID must have no former history. No immediate provider-backup purge or revocation of every issued access token is promised.
@@ -62,12 +62,12 @@ Use two dedicated accounts and separate browser sessions, plus a fresh guest win
 Safe offline suite (real Streamlit secrets are replaced with empty configuration in tests):
 
 ```powershell
-python -m pytest tests -q
+python -m pytest tests -q -m "not live"
 ```
 
 Offline tests cover storage contracts, state transitions, SDK HTTP mocking, owner filtering, retries and grading regressions. They do **not** test hosted RLS, hosted triggers, actual transaction rollback, or actual deletion cascades. The development dependency `pglast==7.21` validates SQL/PL/pgSQL syntax offline; it does not execute the migration.
 
-Live tests require a migrated **test** project and two **precreated dedicated** accounts. They use ordinary user tokens, never an admin key. Set the following variables privately in your shell (do not paste secrets into shared transcripts):
+Live tests require a migrated **test** project and two **precreated dedicated** accounts. The ordinary policy/transaction tests use only ordinary user tokens. The separately gated deletion test below is the sole exception and passes an administrator key only to the isolated deletion function. Set the following variables privately in your shell (do not paste secrets into shared transcripts):
 
 - `MATHMENTOR_LIVE=1`
 - `MM_TEST_SUPABASE_URL`, `MM_TEST_PUBLISHABLE_KEY`
@@ -88,8 +88,10 @@ The deletion test is skipped unless you additionally set `MATHMENTOR_DELETE_DISP
 python -m pytest tests/live/test_supabase_accounts_live.py -q --tb=short -k disposable
 ```
 
-Clear these environment variables after testing. No hosted tests, including destruction, are part of ordinary automated development.
+The provided live suite is test code, not evidence that it has been run on your project. Clear these environment variables after testing. No hosted tests, including destruction, are part of ordinary automated development.
 
 ## Prototype limits
 
 Guests retain preferences, attempts, ratings and mastery only within one Streamlit session. Refreshing or losing that session may discard them. Login tokens also remain only in session memory; there is no Remember me, cookie or disk token storage. Cloud history survives signing in again. There is no email ownership verification, password recovery, automatic SQLite migration, or email-address editing. Pending unsaved analyses and unimported guest work are temporary and can be discarded on logout/session loss.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for current grading and parser limits, and [CONSISTENCY_AUDIT.md](CONSISTENCY_AUDIT.md) for unresolved decisions. Account isolation is not a sandbox for learner-entered Python/SymPy input.

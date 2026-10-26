@@ -35,7 +35,7 @@ def test_all_navigation_pages_render():
     app.run()
     assert not app.exception
 
-    for page in ["Analyze", "Mastery", "About", "Settings", "Home"]:
+    for page in ["Analyze", "Mastery", "About", "Settings", "Account", "Home"]:
         app.radio[0].set_value(page)
         app.run()
         assert not app.exception, f"{page} page raised an exception"

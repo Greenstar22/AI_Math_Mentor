@@ -1,18 +1,18 @@
 /**
  * MathMentor AI — Solution analysis (STUB)
  *
- * This stub mirrors the real pipeline so swapping it later is easy:
+ * This separate design stub is not the current Python engine or its API contract:
  *   1. Compare each submitted step against the problem bank's ground truth.
  *   2. Rule-based pass first: format/parse, incomplete, and sign-error labels.
  *   3. If unclear, "predict" with a mock logistic-regression model AND a mock
- *      DNN; report confidence from whichever has the lower estimated error.
+ *      DNN; report a demo confidence constant from a mock with fixed estimated error.
  *   4. On model disagreement, fall back to concept_gap or
  *      algebra_transformation_error.
  *   5. Pick 1 of 3 prebuilt explanation messages for the chosen label.
  *
  * TODO(real version): replace compareStep with a SymPy-based symbolic check,
  * replace mockLogisticRegression / mockDNN with calls to the hosted models,
- * and use calibrated per-model validation error for the confidence choice.
+ * and validate the integration and confidence method before claiming model accuracy.
  */
 
 import type { Problem } from "@/data/problemBank";
@@ -41,7 +41,7 @@ export interface StepFeedback {
   submittedStep: string;
   correct: boolean;
   errorLabel: ErrorLabel;
-  /** 0–1, taken from the model with the lower estimated error */
+  /** 0-1 demonstration constant/rule value, not a calibrated probability */
   confidence: number;
   concept: string;
   expectedStep: string;

@@ -1,5 +1,7 @@
 # Cleanup audit and project map
 
+> Historical cleanup snapshot: the six-problem bank, SQLite/name-based identity, five-page UI, import-time database initialization and test totals below describe that earlier cleanup. They are not current app behavior. The current source has a reviewed 50-problem bank, UUID-based Supabase accounts, session-only guests, six pages and explicit legacy SQLite helpers. See [ARCHITECTURE.md](ARCHITECTURE.md) and [CONSISTENCY_AUDIT.md](CONSISTENCY_AUDIT.md).
+
 This audit compares the working tree with Git HEAD before the cleanup. It is an explanation, not an additional application change. No commit or push has been made.
 
 ## 1. What the evidence establishes

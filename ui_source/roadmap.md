@@ -1,5 +1,7 @@
 # MathMentor AI — Front-End Draft Roadmap
 
+> Archived React design roadmap, not the current Streamlit release plan. The Linux-backend/Colab proposals and old checklist states below are preserved as historical planning. Current Streamlit accounts use Supabase, and this React demo remains disconnected. See [the current architecture](../docs/ARCHITECTURE.md).
+
 ## Done
 - [x] Rebrand from Liam Fletcher portfolio to MathMentor AI (nav, footer, page copy, index.html metadata)
 - [x] Navigation restructured: Home, Analyze, Mastery, About, Settings — each tab its own page, no same-page anchors

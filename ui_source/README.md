@@ -1,30 +1,44 @@
-# MathMentor AI React UI Source
-
-This directory preserves the attached React and TypeScript UI that guided the Streamlit migration.
+# MathMentor AI React design demo
 
 **Author:** Anchit Nayak  
 **Advisor:** Dr. Qingyang Xiao
 
-## Technology
+This directory retains the React/TypeScript design reference for the Streamlit
+migration. It is independently runnable demonstration code, not the deployed
+Streamlit frontend and not a second implementation of Supabase accounts.
 
-- Vite
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- Framer Motion
-- React Router
-- Recharts
+The current app is https://math-mentorai.streamlit.app/ and its maintained entry
+point is root-level `app.py`. See [the main README](../README.md) and
+[ARCHITECTURE.md](../docs/ARCHITECTURE.md) for current behavior.
 
-## Purpose in this repository
+## What this demo actually does
 
-Streamlit Community Cloud runs the production prototype through the root-level `app.py`. The files in this directory are retained as the original design source for future front-end work, comparison, and possible deployment as a separate React client.
+- Five design pages: Home, Analyze, Mastery, About and Settings; the Streamlit
+  app also has Account.
+- A separate demonstration problem bank and string-comparison heuristics.
+- Mock logistic/DNN functions based on string length, with fixed confidence
+  and estimated-error values. No trained models, SymPy or Python API calls.
+- In-memory mastery examples that can reset when the page reloads; these are
+  not cloud learning records or the current app's mastery formula.
+- A browser-localStorage Dark/Light appearance preference, not persisted login.
+- Placeholder account/password controls with no authentication or save service.
+- A simulated contact submission that sends no message.
 
-## Run the React reference locally
+Its labels, bank, diagnostic constants and proposed features are not the current
+backend contract. `roadmap.md` preserves earlier design planning, including old
+Linux-backend proposals, rather than promising the current deployment plan.
+
+## Run the demo locally
+
+From `ui_source/`, with Node.js and npm available:
 
 ```bash
 npm install
 npm run dev
 ```
 
-The React reference uses front-end prototype data. The deployable Streamlit app connects the migrated visual design to the Python symbolic-checking, ML/DNN diagnosis, SQLite history, mastery analytics, feedback-bandit, and recommendation pipeline.
+`vite.config.ts` requests port 8080 (Vite may choose another if occupied).
+`npm run build` compiles the reference; `npm run lint` checks its TypeScript/React
+source. Node/npm are not required to run the Streamlit app. Dependencies include
+Vite, React, Tailwind, shadcn/ui, Framer Motion, React Router and Recharts.
+The package is private and does not identify a different current repository.

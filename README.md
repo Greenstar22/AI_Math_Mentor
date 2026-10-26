@@ -3,117 +3,93 @@
 **Author:** Anchit Nayak  
 **Advisor:** Dr. Qingyang Xiao
 
-MathMentor AI is a Streamlit Community Cloud-ready educational prototype that reviews a learner's mathematical solution one step at a time. It validates mathematical transformations, diagnoses likely error types, explains how to repair the first miss, tracks mastery, and recommends targeted next practice.
+MathMentor AI is an educational Streamlit prototype for reviewing a learner's written mathematical steps, suggesting likely error categories, recording practice, estimating skill mastery, and recommending another problem. Its checker has reference-path and symbolic-comparison limitations; it is not a proof verifier or a formal assessment system.
 
-- **GitHub:** https://github.com/qxiao2ub/AI_Math_Mentor
-- **Live app:** https://math-ai-mentor.streamlit.app/
+- **Current repository:** https://github.com/Greenstar22/AI_Math_Mentor
+- **Public app:** https://math-mentorai.streamlit.app/
+- **Fork provenance and retained credits:** [CREDITS.md](CREDITS.md#fork-provenance)
 
-The app supports teachers through step-level feedback, progress tracking, and targeted practice suggestions. The interface, feedback, and problems are English-only. Profiles contain no country, region, or language settings.
+The current source provides six pages: Home, Analyze, Mastery, About, Settings, and Account. The interface, reference problems, and generated feedback are English-only. Profiles have no dedicated country, region, or language settings.
 
-## UI migration
+## Accounts, guests, and storage
 
-The attached React, TypeScript, Tailwind CSS, shadcn/ui, and Framer Motion design was migrated into a native Streamlit experience. The front-end source is preserved under `ui_source/` with project-credit and README edits; the deployable Streamlit implementation is `app.py`.
+The app starts in guest mode. A random `guest_` UUID identifies that Streamlit session; preferences, drafts, attempts, evaluations, and feedback ratings stay in session memory. Losing or resetting the session can discard this work. Guests do not need an API key, an anonymous Supabase account, or a local progress database.
 
-The migrated interface includes:
+Optional accounts use Supabase email/password authentication. Identity is the server-validated `auth.users.id` UUID, never a display name or email hash. Display names are editable and nonunique. With the migration and secrets configured, account profiles and saved learning records live in Supabase PostgreSQL. Mastery, recommendations, history, feedback selection, and exports use the selected owner's saved history. Legacy SQLite helpers remain for compatibility and tests, but normal guest/account flows do not use them or automatically migrate old records.
 
-- Home, Analyze, Mastery, About, and Settings views
-- Dark-first black and cobalt visual system with an optional light mode
-- Editorial hero typography and responsive card layouts
-- Step-level feedback cards with error labels, confidence, expected steps, concepts, and mentor guidance
-- Mastery bars, weakness analytics, attempt history, and topic-level settings
-- Complete product workflow, technology stack, prototype boundaries, and project credits
+For this prototype, **Confirm email must be OFF**, **passwords must have at least 12 characters**, **password recovery is unavailable**, and **there is no Remember me**. Email ownership is not verified. Tokens and authenticated clients live only in Streamlit session memory; signing in again can recover saved cloud history, not discarded guest work or unsaved analyses. Missing Supabase configuration leaves guest mode usable.
 
-## Core AI and mathematical workflow
+After login, existing guest attempts require an explicit import-or-discard choice. New learning submissions are blocked until that choice is resolved. Failed account saves retain the original attempt payload for retry; the app does not intentionally add pending work to saved mastery. History reopens saved problem snapshots, verdicts, and feedback without regrading them. Account deletion requires DELETE confirmation and password reauthentication, and uses an isolated server-side administrator client. Hosted privacy, transaction, and cascade behavior require live verification; offline tests alone do not establish those guarantees.
 
-1. Capture a learner profile and current topic levels.
-2. Select a problem from the calibrated starter bank.
-3. Parse each submitted step with SymPy.
-4. Compare steps symbolically with the expected solution trajectory.
-5. Diagnose likely errors using transparent rules, logistic regression, and a compact neural-network classifier.
-6. Save attempts and step evaluations in SQLite.
-7. Estimate weaknesses and concept mastery.
-8. Select a feedback style through an epsilon-greedy contextual bandit.
-9. Generate downloadable Markdown and JSON reports.
-10. Recommend the next targeted problem.
+See [ACCOUNTS_SETUP.md](docs/ACCOUNTS_SETUP.md) for the migration, configuration, session limits, and opt-in live tests.
 
-## Repository structure
+## Problem bank and input
 
-```text
-.
-|-- app.py
-|-- math_mentor.py
-|-- requirements.txt
-|-- runtime.txt
-|-- .streamlit/config.toml
-|-- Anchit_Nayak_AI_Math_Mentor_App_Colab_Prototype.ipynb
-|-- assets/
-|-- tests/
-|-- ui_source/
-|-- UI_MIGRATION.md
-|-- DEPLOYMENT.md
-|-- LICENSE
-`-- README.md
-```
+`math_mentor.py` contains **50 unique problems**: five topics, five concepts per topic, and two problems (`001` and `002`) per concept. Every pair has different difficulty ratings; `002` is not always harder. Difficulty 1/2/3 corresponds to beginner/intermediate/advanced selection targets and is an author-assigned rating, not a calibrated student-performance measure.
+
+The topics are Algebra 1, Geometry, Algebra 2, Precalculus, and Calculus. Problems carry prompts, grade bands, expected steps, consolidated skill labels, explanations, hints, and final answers. There are 212 reference lines and 70 distinct skill labels. `DEFAULT_STEPS` in `app.py` derives the example input directly from those reference lines.
+
+Enter one expression or equation per line, using explicit multiplication (`2*x`), powers (`x**2` or `x^2`), and radians for trigonometric functions. Functions include `sqrt`, `sin`, `cos`, `tan`, `log`, `exp`, `Derivative`, `Integral`, and `Limit`. Both `i` and `I` represent the imaginary unit; their reference matching is normalized without changing `Integral` or `Limit`.
+
+Parsing support does not guarantee reference credit for every equivalent spelling. Reference matching now ignores whitespace between tokens while preserving the written operations and token boundaries; it does not simplify equivalent equations into the same stage. Keep original domain restrictions even after cancellation. Natural-language proofs, arbitrary problem entry, diagram interpretation, and general branch-aware proof checking are not implemented.
+
+## Checking, scores, and diagnostic models
+
+The evaluator first looks forward for a matching reference line. If no match is found, it can accept symbolic equivalence with the preceding submitted line as a `valid additional step` or a `carry-on error` after an earlier deviation. Both currently count as correct submitted steps, but neither adds reference coverage. This does not establish that a carried error solves the original problem or that an inferred skill was demonstrated.
+
+The unchanged `v1` overall score is `100 * (0.65 * step_accuracy + 0.35 * coverage)`. Coverage counts distinct matched reference indices. Mastery is a heuristic grouped by topic and skill, not a validated proficiency measure; recommendations rank the bank using stated topic levels, observed errors, skill overlap, and a small bonus for unattempted problems.
+
+Diagnostic rules are supplemented by TF-IDF plus logistic regression and a scikit-learn MLP with hidden layers `(64, 32)`. They train at module import on 252 synthetic template examples, split into 189 training and 63 held-out examples; the MLP also reserves part of its training split for early stopping. These are local demonstration classifiers, not an LLM or a model trained on real learner outcomes. Displayed confidence combines heuristic constants and model outputs and is not a calibrated probability of mathematical correctness. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for formulas, model dimensions, and limitations.
+
+The current parser uses SymPy `parse_expr`; input normalization is not a security sandbox. [SymPy's parsing documentation](https://docs.sympy.org/latest/modules/parsing.html) warns about evaluating unsanitized input. Parser hardening is deferred at the owner's request; account RLS does not make the Python parser safe for untrusted public input.
 
 ## Run locally
 
+Run from the repository root using **Python 3.12**, the supported and tested project target. `runtime.txt` and CI both specify 3.12. Streamlit Community Cloud selects its actual Python version through deployment **Advanced settings**; `runtime.txt` alone does not establish the hosted version. No dependency upgrade is part of this alignment.
+
 ```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
+python3.12 -m venv .venv
+# Windows alternative: py -3.12 -m venv .venv
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-## Deploy on Streamlit Community Cloud
+For offline development checks:
 
-Upload the contents of this repository to GitHub, choose the repository in Streamlit Community Cloud, and set the main file path to `app.py`. No API key is required for the math tutoring functions. Persistent cumulative visit counting requires one private GitHub token and a separate GitHub branch; see `VISITOR_COUNTER_SETUP.md`.
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q -m "not live"
+```
 
-## Prototype notes
+Runtime dependencies are Streamlit, NumPy, pandas, SymPy, scikit-learn, and pinned `supabase==2.33.0`. Development requirements add pytest and `pglast==7.21` for SQL syntax checks. Hosted migrations, real account tests, authentication emails, and account deletion are not part of the offline command.
 
-- `math_mentor.py` is the single app backend and owns the six-problem starter bank from the uploaded Colab prototype. The root notebook code cells match that reference.
-- `ui_source/` is a standalone design reference with demo analysis and mastery data; it is not connected to the Python backend.
+## Setup and deployment
 
-- The starter problem bank is intentionally small and self-contained.
-- The symbolic checker is the primary mathematical validator.
-- ML and DNN components support error diagnosis and personalization; they do not independently establish mathematical truth.
-- SQLite persistence on Streamlit Community Cloud is ephemeral and can reset during restarts or redeployments.
-- A production version should add authentication, a managed database, a curated or licensed problem corpus, accessibility testing, privacy controls, child-safety review, educator oversight, and broader validation.
+The Streamlit entry point is `app.py` in this repository. [DEPLOYMENT.md](DEPLOYMENT.md) covers repository/branch selection and the public URL. Accounts require the manually applied SQL migration and `[supabase]` URL/publishable-key settings described in [ACCOUNTS_SETUP.md](docs/ACCOUNTS_SETUP.md). The administrator secret is used only for account deletion. Do not put real credentials in tracked files.
 
-## Credits
+The placeholder template is [.streamlit/secrets.example.toml](.streamlit/secrets.example.toml); the real `.streamlit/secrets.toml` must remain ignored. `[app].public_url` is descriptive configuration only: the displayed app link currently comes from `LIVE_APP_URL` in `app.py`, and authentication uses no email redirects.
 
-- **Author:** Anchit Nayak
-- **Advisor:** Dr. Qingyang Xiao
+The optional visit counter is separate from learner progress. It stores an aggregate integer at `data/visit_counter.json` on the configured GitHub storage branch, defaulting to `visitor-stats` in `Greenstar22/AI_Math_Mentor`. `VISIT_COUNTER_GITHUB_TOKEN` needs Contents read/write access to the fork; `VISIT_COUNTER_REPO` and `VISIT_COUNTER_BRANCH` can override defaults through Streamlit secrets or environment variables. Verify that the branch and file exist in the fork; do not recreate an existing counter branch or reset its total. See [VISITOR_COUNTER_SETUP.md](VISITOR_COUNTER_SETUP.md).
 
-## Persistent cumulative app-visit counter (new)
+No token means the counter is unavailable/setup-required, not a fabricated live zero. Network failures and ambiguous writes can miss increments, and this does not measure unique humans. Current account/guest state resets also clear the counter's attempted flag, so another increment can occur within one browser session; that counting behavior is intentionally retained for now.
 
-**Visible on every view (Home, Analyze, Mastery, About, Settings)** at the top
-and in the footer. It increments by one for each *new Streamlit session*, not
-each navigation click or UI rerun. The integer is preserved in a **GitHub JSON
-file on a separate `visitor-stats` branch**, so it survives normal Streamlit
-Community Cloud restarts and redeployments without using a counter database.
-No personal visitor information is collected for this counter.
+## Maintained source and historical references
 
-### Important: one-time secret and branch are required
+| Path | Role |
+|---|---|
+| `app.py`, `account_ui.py` | Current Streamlit pages, forms, and session transitions |
+| `auth_service.py` | Validated authentication, refresh, local-scope logout, isolated deletion |
+| `progress_store.py`, `supabase_store.py` | Guest memory, cloud storage, immutable attempt payloads, history adapters |
+| `math_mentor.py` | Reviewed bank, parser/checker, synthetic diagnostic models, scoring, mastery, recommendations; explicit legacy SQLite helpers |
+| `visit_counter.py` | Separate GitHub-backed aggregate counter |
+| `supabase/migrations/202610260001_accounts.sql` | Learning schema, profile triggers, RLS, ownership constraints, transactional RPCs |
+| `tests/` | Offline engine, store, authentication, counter, and Streamlit checks; opt-in `tests/live/` |
+| `ui_source/` | Independent React design/demo, not the deployed frontend or account implementation |
+| `Anchit_Nayak_AI_Math_Mentor_App_Colab_Prototype.ipynb` | Historical six-problem SQLite/optional-Gradio prototype; not synchronized with the current bank or accounts |
+| `docs/CLEANUP_AUDIT.md` | Historical cleanup report, not a current architecture or test-results statement |
 
-A live, never-reset-on-redeploy total **cannot be guaranteed** with Streamlit's
-local ephemeral files alone. To activate persistent counts, follow the exact
-instructions in **[VISITOR_COUNTER_SETUP.md](VISITOR_COUNTER_SETUP.md)**:
+The React demo uses separate problems, mocked diagnostic models, an in-memory mastery catalogue, browser-local appearance preferences, and account placeholders. Its contact form simulates submission. The current Streamlit About contact form also only validates locally; it does not send a message. Neither is a working contact service.
 
-1. Upload the repo to `main` at https://github.com/qxiao2ub/AI_Math_Mentor.
-2. Create a new GitHub branch named `visitor-stats` from `main` **once**.
-3. Create a fine-grained GitHub token scoped to this one repository with
-   Contents **read/write** access.
-4. Add the token and the branch in Streamlit Community Cloud's **App settings
-   → Secrets** using `.streamlit/secrets.example.toml` as the template.
-
-**Never push a real token to GitHub.** Without the token, the app still runs,
-but the badge will show **— / SETUP REQUIRED**, not a false permanent count.
-An initial zero in the JSON is only a seed; a successful first session changes
-it to 1, and the UI never shows zero as an active visit total. Do not delete or
-recreate the `visitor-stats` branch after launching, as it holds the history.
-
-The file-commit implementation retries GitHub SHA conflicts and is appropriate
-for a small educational prototype. It may not capture every visit during
-GitHub outages/rate limits, and it does not distinguish unique humans from
-multiple browser sessions.
+Current limitations and deferred work are recorded in [CONSISTENCY_AUDIT.md](docs/CONSISTENCY_AUDIT.md). There is no claim of classroom-calibrated accuracy, comprehensive mathematical correctness, measured environmental benefit, production security, or completed hosted verification.

@@ -105,12 +105,18 @@ def test_validates_bad_remote_counter_without_resetting_to_zero():
 
 
 def test_counter_config_default_and_custom_secrets():
+    default = CounterConfig()
+    assert default.repository == "Greenstar22/AI_Math_Mentor"
+    assert GitHubVisitCounter(default).url == (
+        "https://api.github.com/repos/Greenstar22/AI_Math_Mentor/contents/data/visit_counter.json"
+    )
     config = CounterConfig.from_secrets({
         "VISIT_COUNTER_GITHUB_TOKEN": "test_secret",
-        "VISIT_COUNTER_REPO": "qxiao2ub/AI_Math_Mentor",
+        "VISIT_COUNTER_REPO": "example-owner/example-counter",
         "VISIT_COUNTER_BRANCH": "visitor-stats",
     })
     assert config.token == "test_secret"
+    assert config.repository == "example-owner/example-counter"
     assert config.branch == DEFAULT_BRANCH
     with pytest.raises(CounterError):
         CounterConfig(repository="other example")

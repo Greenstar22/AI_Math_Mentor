@@ -1,6 +1,8 @@
 """Durable, database-free cumulative visit counter backed by a GitHub JSON file.
 
-A new Streamlit session records exactly one *attempted* visit. Its counter is
+Each retained counter-state lifecycle records one *attempted* visit. Account
+or guest resets clear that state and can count again within one browser session.
+The aggregate counter is
 stored in a separate GitHub branch so that normal counters do not redeploy the
 app. A GitHub Contents API compare-and-swap (file SHA) protects most concurrent
 updates and is retried on conflicts. No visitor identity is stored.
@@ -24,7 +26,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 COUNTER_FILE = "data/visit_counter.json"
-DEFAULT_REPOSITORY = "qxiao2ub/AI_Math_Mentor"
+DEFAULT_REPOSITORY = "Greenstar22/AI_Math_Mentor"
 DEFAULT_BRANCH = "visitor-stats"
 REFRESH_SECONDS = 30.0
 MAX_UPDATE_ATTEMPTS = 6
@@ -191,7 +193,7 @@ def snapshot_for_session(
     *,
     now: float | None = None,
 ) -> CounterSnapshot:
-    """Increment once per Streamlit session; refresh totals without double-counting.
+    """Increment once per retained counter state; refresh without another increment.
 
     The attempted flag is set before the network call so a rerun following a
     partially successful/ambiguous request won't blindly add a duplicate visit.

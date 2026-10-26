@@ -29,6 +29,7 @@ const Navigation = () => {
             onClick={closeMenu}
           >
             MATHMENTOR <span className="text-primary">AI</span>
+            <span className="block text-xs font-normal text-muted-foreground">React design demo - separate from the Streamlit app</span>
           </Link>
 
           {/* Desktop Navigation */}

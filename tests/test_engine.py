@@ -8,6 +8,7 @@ from math_mentor import (
     PROBLEM_BANK, PROBLEMS_BY_ID, StudentProfile, evaluate_solution_steps,
     initialize_database, load_student_history, parse_statement, record_attempt,
     recommend_next_problem, solution_score, symbolic_equivalent, weakness_summary,
+    reference_tokens,
 )
 
 
@@ -67,6 +68,42 @@ def test_reference_solutions_score_full_marks(problem):
     assert solution_score(results, problem)["overall_score"] == 100.0
 
 
+@pytest.mark.parametrize("problem", PROBLEM_BANK, ids=lambda p: p.problem_id)
+def test_reference_formatting_whitespace_preserves_every_stage(problem):
+    submitted = [" \t ".join(value for _, value in reference_tokens(step.math)) for step in problem.expected_steps]
+    results = evaluate_solution_steps(problem, submitted)
+    assert [r.matched_expected_index for r in results] == list(range(len(problem.expected_steps)))
+    assert all(r.is_correct for r in results)
+    assert solution_score(results, problem)["overall_score"] == 100.0
+
+
+def test_reference_matching_uses_tokens_without_symbolic_equivalence(monkeypatch):
+    import math_mentor
+
+    def forbidden(*args):
+        pytest.fail("Reference matching must not use symbolic equivalence")
+    monkeypatch.setattr(math_mentor, "symbolic_equivalent", forbidden)
+    problem = PROBLEMS_BY_ID["ALG1-LIN-001"]
+    results = evaluate_solution_steps(problem, [" Step 1: 2 * x+3=11 ", "2*x =8", "x= 4"])
+    assert [r.matched_expected_index for r in results] == [0, 1, 2]
+
+
+def test_reference_token_boundaries_and_algebraic_stages_stay_distinct():
+    assert reference_tokens("x**2") == reference_tokens("x ^ 2")
+    assert reference_tokens("5-I") == reference_tokens("5 - i")
+    assert reference_tokens("1 2") != reference_tokens("12")
+    assert reference_tokens("x y") != reference_tokens("xy")
+    assert reference_tokens("2*x+3=11") != reference_tokens("2*x=8")
+    assert reference_tokens("2*x=8") != reference_tokens("x=4")
+    assert reference_tokens("(x+1)**2") != reference_tokens("x**2+2*x+1")
+    linear = evaluate_solution_steps(PROBLEMS_BY_ID["ALG1-LIN-001"], ["2*x=8"])
+    assert linear[0].matched_expected_index == 1
+    final = evaluate_solution_steps(PROBLEMS_BY_ID["ALG1-LIN-001"], ["x=4"])
+    assert final[0].matched_expected_index == 2
+    fraction = evaluate_solution_steps(PROBLEMS_BY_ID["ALG1-FRAC-001"], ["17/12"])
+    assert fraction[0].matched_expected_index == 2
+
+
 def test_incorrect_step_is_caught():
     problem = PROBLEMS_BY_ID["ALG1-LIN-001"]
     results = evaluate_solution_steps(problem, ["2*x + 3 = 11", "2*x = 10"])
@@ -75,6 +112,7 @@ def test_incorrect_step_is_caught():
 
 
 def test_profile_progress_and_recommendation(tmp_path):
+    # Explicit legacy SQLite helper coverage; normal app flows use progress stores.
     profile = StudentProfile("learner", "Learner", "Grades 9-12", {"Algebra 1": "intermediate"})
     assert set(asdict(profile)) == {
         "student_id", "display_name", "grade_band", "current_levels",
