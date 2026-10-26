@@ -40,9 +40,9 @@ DEFAULT_STEPS = {
     "ALG1-LIN-002": "16*y + 98*x = 39\n16*y = -98*x + 39\ny = (-98/16)*x + 39/16\n-98/16",
     "ALG1-QUAD-001": "x**2 - 5*x + 6 = 0\n(x - 2)*(x - 3) = 0\nx = 2\nx = 3",
     "ALG1-QUAD-002": "y = x**2 - 5*x + 6\nx=-b/(2*a)\nx = --5/(2*1)\nx = 5/2\ny = (5/2)**2 - 5*(5/2) + 6\ny = -1/4",
-    "CALC-POLYDERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
     "ALG1-PROB-001": "P_none = (1/2)**2\nP_at_least_one = 1 - P_none\nP_at_least_one = 1 - (1/2)**2\nP_at_least_one = 3/4",
-    "DE-EXP-001": "1/y\nlog(y) = 3*t + C\ny = C*exp(3*t)\ny = 2*exp(3*t)",
+    "CALC-POLYDERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
+    "CALC-DE-001": "1/y\nlog(y) = 3*t + C\ny = C*exp(3*t)\ny = 2*exp(3*t)",
 }
 
 st.set_page_config(
@@ -627,12 +627,12 @@ def render_analyze() -> None:
             <div class="mm-problem">
                 <div class="mm-meta">Your problem</div>
                 <div class="mm-problem-text">{esc(problem.prompt)}</div>
-                <div class="mm-meta">Concept {esc(problem.concept)} / Skills {esc(' / '.join(problem.skills))}</div>
+                <div class="mm-meta">Concept {esc(problem.concept)}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        with st.expander("Hints and learning targets"):
+        with st.expander("Hints and expected pathway"):
             for index, hint in enumerate(problem.hints, start=1):
                 st.markdown(f"**Hint {index}:** {hint}")
             st.caption("Expected learning pathway: " + " -> ".join(step.skill.replace("_", " ") for step in problem.expected_steps))
