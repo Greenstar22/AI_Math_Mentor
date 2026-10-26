@@ -1,9 +1,27 @@
 from pathlib import Path
+import ast
 
 from streamlit.testing.v1 import AppTest
 
+from math_mentor import PROBLEM_BANK
+
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
+
+
+def test_default_steps_cover_bank_exactly():
+    # Read the assignment without executing Streamlit's page or database effects.
+    tree = ast.parse(APP.read_text(encoding="utf-8"))
+    assignment = next(
+        node for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "DEFAULT_STEPS" for target in node.targets)
+    )
+    defaults = eval(compile(ast.Expression(assignment.value), str(APP), "eval"), {"PROBLEM_BANK": PROBLEM_BANK})
+    assert len(defaults) == 50
+    assert set(defaults) == {problem.problem_id for problem in PROBLEM_BANK}
+    for problem in PROBLEM_BANK:
+        assert defaults[problem.problem_id].split("\n") == [step.math for step in problem.expected_steps]
 
 
 def test_home_page_runs_without_exception():

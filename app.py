@@ -34,18 +34,8 @@ LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"]
 TOPICS = sorted({problem.topic for problem in PROBLEM_BANK})
 
 DEFAULT_STEPS = {
-    "ALG1-FRAC-001": "3/4 + 2/3\n9/12 + 8/12\n17/12\n1 + 5/12",
-    "ALG1-EXP-001": "((9/16)^2)/((3/4)^3)\n(((3/4)^2)^2)/((3/4)^3)\n((3/4)^4)/((3/4)^3)\n3/4",
-    "ALG1-LIN-001": "2*x + 3 = 11\n2*x = 8\nx = 4",
-    "ALG1-LIN-002": "16*y + 98*x = 39\n16*y = -98*x + 39\ny = (-98/16)*x + 39/16\n-98/16",
-    "ALG1-QUAD-001": "x**2 - 5*x + 6 = 0\n(x - 2)*(x - 3) = 0\nx = 2\nx = 3",
-    "ALG1-QUAD-002": "y = x**2 - 5*x + 6\nx=-b/(2*a)\nx = -(-5)/(2*1)\nx = 5/2\ny = (5/2)**2 - 5*(5/2) + 6\ny = -1/4",
-    "ALG1-PROB-001": "P_none = (1/2)**2\nP_at_least_one = 1 - P_none\nP_at_least_one = 1 - (1/2)**2\nP_at_least_one = 3/4",
-    "GEO-TRIG-001": "a^2 + b^2 = c^2\n10^2 + 24^2 = c^2\n100 + 576 = c^2\n676 = c^2\nc = 26",
-    "ALG2-CONIC-001": "x^2 + 8x + y^2 + 6y = 0\nx^2 + 8x + 16 + y^2 + 6y + 9 = 16 + 9\n(x + 4)^2 + (y + 3)^2 = 25\n(x - h)^2 + (y - k)^2 = r^2\nh = -4\nk = -3\n-4 + (-3)\n-7",
-    "PRECALC-COMPLEX-001": "(3 + 4i) + (2 - 5i)\n5 - i\n5 + (-1)\n4",
-    "CALC-POLYDERIV-001": "Derivative(x**3 - 4*x + 7, x)\n3*x**2 - 4 + 0\n3*x**2 - 4",
-    "CALC-DE-001": "1/y\nlog(y) = 3*t + C\ny = C*exp(3*t)\ny = 2*exp(3*t)",
+    problem.problem_id: "\n".join(step.math for step in problem.expected_steps)
+    for problem in PROBLEM_BANK
 }
 
 st.set_page_config(
