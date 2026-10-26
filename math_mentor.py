@@ -206,12 +206,12 @@ PROBLEM_BANK: List[MathProblem] = [
         hints=["The pythagorean theorem states that a^2 + b^2 = c^2.", "a and b are the legs of the right triangle, while c is the length of the hypotenuse."],
         ),
     MathProblem(
-        problem_id="PRCL-CONIC-001",
-        topic="Geometry",
+        problem_id="ALG2-CONIC-001",
+        topic="Algebra 2",
         concept="Conic sections",
         grade_band="Grades 9-12",
         difficulty=3,
-        prompt="Find the absolute difference between the x-coordinate and y-coordinate of the vertex of the conic section: x^2 + 8x + y^2 + 6y = 0.",
+        prompt="Find the sum of the x-coordinate and y-coordinate of the vertex of the conic section: x^2 + 8x + y^2 + 6y = 0.",
         expected_steps=[
             ExpectedStep("x^2 + 8x + y^2 + 6y = 0", "equation_setup", "Identify the conic section equationo."),
             ExpectedStep("x^2 + 8x + 16 + y^2 + 6y + 9 = 16 + 9", "completing_the_square", "Add 16 and 9 to both sides to complete the square."),
@@ -219,12 +219,28 @@ PROBLEM_BANK: List[MathProblem] = [
             ExpectedStep("(x - h)^2 + (y - k)^2 = r^2", "equation_setup", "Identify the standard form of a circle."),
             ExpectedStep("h = -4", "vertex_analysis", "Identify the x-coordinate of the vertex."),
             ExpectedStep("k = -3", "vertex_analysis", "Identify the y-coordinate of the vertex."),
-            ExpectedStep("|(-4) - (-3)|", "equation_setup", "Model the absolute difference between the coordinates."),
-            ExpectedStep("1", "simplification", "Calculate the answer")
+            ExpectedStep("-4 + (-3)", "equation_setup", "Model the sum of the coordinates."),
+            ExpectedStep("-7", "simplification", "Calculate the answer")
         ],
-        final_answer="1",
+        final_answer="-7",
         hints=["Complete the square for both the x terms and the y terms individually", "To complete the square, add numbers to both sides to be able to factor the x and y terms into two squared factors", "Add (b/2)^2 to both sides twice, once where b is the coefficient of the first degree x term and once for y term", "Compare the resulting equation with the equation for a circle to determine the coordinates of the vertex"],
             ),
+    MathProblem(
+        problem_id="PRECALC-COMPLEX-001",
+        topic="Precalculus",
+        concept="Complex numbers",
+        grade_band="Grades 9-12",
+        difficulty=1,
+        prompt="Find the sum of the coefficients of the real and imaginary terms of the complex number (3 + 4i) + (2 - 5i).",
+        expected_steps=[
+            ExpectedStep("(3 + 4i) + (2 - 5i)", "equation_setup", "Identify the equation."),
+            ExpectedStep("5 - i", "simplification", "Combine like terms."),
+            ExpectedStep("5 + (-1)", "equation_setup", "Model the sum of the coefficients of the real and imaginary terms."),
+            ExpectedStep("4", "simplification", "Calculate the answer."),
+        ],
+        final_answer="4",
+        hints=["To add complex numbers, add the real parts and the imaginary parts separately.", "The real part of (3 + 4i) is 3, and the real part of (2 - 5i) is 2.", "The imaginary part of (3 + 4i) is 4i, and the imaginary part of (2 - 5i) is -5i."],
+    ),
     MathProblem(
         problem_id="CALC-POLYDERIV-001",
         topic="Calculus",
