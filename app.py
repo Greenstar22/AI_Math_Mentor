@@ -57,7 +57,7 @@ def initialize_state() -> None:
         "preferred_feedback": "socratic",
         "school_class": "",
         "accessibility_notes": "",
-        "problem_selector": "ALG1-QUAD-001",
+        "problem_selector": "ALG1-LIN-001",
         "feedback_recorded": False,
     }
     for topic in TOPICS:
