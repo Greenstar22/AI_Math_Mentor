@@ -17,6 +17,5 @@ Project advisor for AI, data science, mathematical modeling, product architectur
 
 ## Fork provenance
 
-This repository was forked from [qxiao2ub/AI_Math_Mentor](https://github.com/qxiao2ub/AI_Math_Mentor).
-The current repository is maintained under Greenstar22; fork ownership does not
-change the original author and advisor credits above or imply authorship of inherited work.
+This repository was forked from [qxiao2ub/AI_Math_Mentor](https://github.com/qxiao2ub/AI_Math_Mentor), a repository under my advisor.
+The current repository is maintained under Greenstar22 (Anchit Nayak); the work in the upstream repository was done by me under the guidance of my advisor and was initially temporarily committed to my mentor's repository. The work I did in the upstream repository was a result of the code in the file "Anchit_Nayak_AI_Math_Mentor_App_Colab_prototype.ipynb."
